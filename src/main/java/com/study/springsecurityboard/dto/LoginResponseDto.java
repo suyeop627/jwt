@@ -1,7 +1,7 @@
 package com.study.springsecurityboard.dto;
 
 import com.study.springsecurityboard.domain.Role;
-import com.study.springsecurityboard.utils.LoginStatus;
+import com.study.springsecurityboard.utils.member.LoginStatus;
 import lombok.*;
 
 import java.util.Set;

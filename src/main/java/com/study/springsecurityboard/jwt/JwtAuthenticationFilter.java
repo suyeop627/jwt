@@ -1,8 +1,7 @@
 package com.study.springsecurityboard.jwt;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.study.springsecurityboard.security.service.MemberUserDetailsService;
-import com.study.springsecurityboard.utils.LoginStatus;
+import com.study.springsecurityboard.utils.member.LoginStatus;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -17,7 +16,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 
 /*jwt 인증처리
