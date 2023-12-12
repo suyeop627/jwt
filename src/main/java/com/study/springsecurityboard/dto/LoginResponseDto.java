@@ -17,5 +17,4 @@ public class LoginResponseDto {
   String email;
   String name;
   Set<Role> roles;
-  LoginStatus status;
 }

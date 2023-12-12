@@ -43,15 +43,17 @@ public class AuthenticationController {
 
     log.info("Attempting renew access token with refresh token {}", refreshTokenDto.getToken());
 
+    LoginResponseDto response = null;
     //is valid refresh token?
     //db저장 유무 확인
+    try {
     RefreshToken refreshToken = authenticationService.searchRefreshToken(refreshTokenDto.getToken())
         .orElseThrow(() -> new IllegalArgumentException("token doesn't exist in database"));
 
-    LoginResponseDto response = null;
+
 
     //만료여부 확인
-    try {
+
       //acees token 재발급
       response = authenticationService.reIssueAccessToken(refreshToken.getToken());
 
@@ -62,7 +64,7 @@ public class AuthenticationController {
 
     } catch (ExpiredJwtException e) {
       //todo : 로그인 재요청하기
-      response = LoginResponseDto.builder().status(LoginStatus.REFRESH_TOKEN_EXPIRED).build();
+      //response = LoginResponseDto.builder().build();
     } catch (Exception e) {
       e.printStackTrace();
       //response = LoginResponseDto.builder().status(LoginStatus.REFRESH_TOKEN_EXPIRED).build();
@@ -73,6 +75,7 @@ public class AuthenticationController {
 
   @DeleteMapping("/logout")
   public ResponseEntity logout(@RequestBody RefreshTokenDto refreshTokenDto) {
+    log.info("logout called, token : {}", refreshTokenDto.getToken());
     refreshTokenService.deleteRefreshToken(refreshTokenDto.getToken());
     return new ResponseEntity(HttpStatus.OK);
   }

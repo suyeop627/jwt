@@ -65,7 +65,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         .email(member.getEmail())
         .accessToken(accessToken)
         .refreshToken(refreshToken)
-        .status(LoginStatus.OK)
         .build();
   }
   @Override
@@ -95,7 +94,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         .accessToken(accessToken)
         .refreshToken(refreshToken)
         .roles(roles)
-        .status(LoginStatus.OK)
         .build();
   }
 

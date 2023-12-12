@@ -1,5 +1,6 @@
 package com.study.springsecurityboard.config;
 
+import com.study.springsecurityboard.exception.CustomAuthenticationEntryPoint;
 import com.study.springsecurityboard.jwt.JwtAuthenticationFilter;
 import com.study.springsecurityboard.jwt.JwtAuthenticationProvider;
 import org.springframework.context.annotation.Bean;
@@ -19,10 +20,11 @@ import org.springframework.web.cors.CorsUtils;
 public class SecurityFilterChainConfig {
   private final JwtAuthenticationFilter jwtAuthenticationFilter;
   private final JwtAuthenticationProvider jwtAuthenticationProvider;
-
-  public SecurityFilterChainConfig(JwtAuthenticationFilter jwtAuthenticationFilter, JwtAuthenticationProvider jwtAuthenticationProvider) {
+  private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
+  public SecurityFilterChainConfig(JwtAuthenticationFilter jwtAuthenticationFilter, JwtAuthenticationProvider jwtAuthenticationProvider, CustomAuthenticationEntryPoint customAuthenticationEntryPoint) {
     this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     this.jwtAuthenticationProvider = jwtAuthenticationProvider;
+    this.customAuthenticationEntryPoint = customAuthenticationEntryPoint;
   }
 
   @Bean
@@ -34,7 +36,7 @@ public class SecurityFilterChainConfig {
         .authorizeHttpRequests(httpRequest ->
             httpRequest
                 .requestMatchers(CorsUtils::isPreFlightRequest).permitAll()
-                .requestMatchers(HttpMethod.POST,"/members", "/auth/login", "auth/refresh")
+                .requestMatchers(HttpMethod.POST, "/members", "/auth/login", "auth/refresh")
                 .permitAll()
                 .requestMatchers(HttpMethod.GET, "/board")
                 .permitAll()
@@ -46,7 +48,8 @@ public class SecurityFilterChainConfig {
                 .authenticated()
         ).sessionManagement(securitySessionManagementConfigurer -> securitySessionManagementConfigurer.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-          .authenticationProvider(jwtAuthenticationProvider);
+        .authenticationProvider(jwtAuthenticationProvider)
+        .exceptionHandling(httpSecurityExceptionHandlingConfigurer -> httpSecurityExceptionHandlingConfigurer.authenticationEntryPoint(customAuthenticationEntryPoint));
 
     return http.build();
   }

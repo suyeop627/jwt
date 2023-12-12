@@ -36,6 +36,13 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
 
   @Override
   public void deleteRefreshToken(String token) {
-    refreshTokenRepository.findByToken(token).ifPresent(refreshTokenRepository::delete);
+    Optional<RefreshToken> optionalToken = refreshTokenRepository.findByToken(token);
+    if(optionalToken.isPresent(){
+      refreshTokenRepository.deleteById(optionalToken.get().getId());
+    }else{
+      //todo controller exception 처리
+
+
+    }
   }
 }
