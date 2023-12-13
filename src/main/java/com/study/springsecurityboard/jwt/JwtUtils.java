@@ -24,19 +24,19 @@ public class JwtUtils {
   @Value("${jwt.type.accessToken}")
   private String ACCESS_TOKEN_TYPE;
 
-  public final Long ACCESS_TOKEN_DURATION =  3* 60 * 1000L; // 30 minutes
+  public final Long ACCESS_TOKEN_DURATION =  30 * 60 * 1000L; // 30 minutes
 
   //public final Long REFRESH_TOKEN_DURATION = 7 * 24 * 60 * 60 * 1000L; // 7 days
-  public final Long REFRESH_TOKEN_DURATION = 60 * 1000L; // 7 days
+  public final Long REFRESH_TOKEN_DURATION = 3 * 60 * 1000L; // 7 days
 
 
-  public String issueToken(Long memberId, String subject, String name, Set<Role> roles, String type) {
+  public String issueToken(Long memberId, String subject, String name, Set<String> roles, String type) {
     String token = Jwts.builder()
         .subject(subject)
         .issuedAt(new Date())
         .expiration(new Date(new Date().getTime()+getDuration(type)))
         .claim("name", name)
-        .claim("roles", roles.stream().map(Role::getName).collect(Collectors.toSet()))
+        .claim("roles", roles)
         .claim("type", type)
         .claim("memberId", memberId)
         .signWith(getSecretKey(type))

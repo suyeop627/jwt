@@ -35,19 +35,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                   FilterChain filterChain) throws ServletException, IOException {
     log.info("JwtAuthenticationFilter activated");
 
-    //access token이 필요 없는 경우(refresh token으로 처리되는 경우)
-    if (request.getRequestURI().equals("/auth/refresh")||request.getRequestURI().equals("/auth/logout")) {
-      log.info("JwtAuthenticationFilter passed -> refresh or logout ");
+    //access token이 필요 없는 경우(refresh token으로 처리되거나 token을 발급 받기 위한 요청)
+    if (request.getRequestURI().equals("/auth/refresh") ||request.getRequestURI().equals("/auth/login")) {
+      log.info("JwtAuthenticationFilter passed -> {} ", request.getRequestURI());
       filterChain.doFilter(request, response);
       return;
     }
 
     try {
       String token = getTokenFromRequest(request);
-//      if(token==null){
-//        filterChain.doFilter(request, response);
-//        return;
-//      }
+      if(token==null){
+        filterChain.doFilter(request, response);
+        return;
+      }
       JwtAuthenticationToken jwtAuthenticationToken = new JwtAuthenticationToken(token);
 
       Authentication authentication = jwtAuthenticationProvider.authenticate(jwtAuthenticationToken);

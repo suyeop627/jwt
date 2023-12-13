@@ -36,16 +36,15 @@ public class SecurityFilterChainConfig {
         .authorizeHttpRequests(httpRequest ->
             httpRequest
                 .requestMatchers(CorsUtils::isPreFlightRequest).permitAll()
-                .requestMatchers(HttpMethod.POST, "/members", "/auth/login", "auth/refresh")
+                .requestMatchers(HttpMethod.POST, "/members", "/auth/login", "/auth/refresh")
                 .permitAll()
                 .requestMatchers(HttpMethod.GET, "/board")
                 .permitAll()
-                .requestMatchers(HttpMethod.POST, "/**")
-                .hasAnyRole("USER", "ADMIN")
                 .requestMatchers("/admin")
                 .hasRole("ADMIN")
                 .anyRequest()
                 .authenticated()
+
         ).sessionManagement(securitySessionManagementConfigurer -> securitySessionManagementConfigurer.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
         .authenticationProvider(jwtAuthenticationProvider)

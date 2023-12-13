@@ -48,8 +48,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     refreshTokenSavedInDB.ifPresent(refreshToken -> refreshTokenService.deleteRefreshTokenById(refreshToken.getId()));
 
     Member member = ((MemberUserDetails) authentication.getPrincipal()).getMember();
-    String accessToken = jwtUtils.issueToken(member.getMemberId(), member.getEmail(), member.getName(), member.getRoles(), TYPE_ACCESS);
-    String refreshToken = jwtUtils.issueToken(member.getMemberId(), member.getEmail(), member.getName(), member.getRoles(), TYPE_REFRESH);
+
+
+    Set<String> roles = member.getRoles().stream().map(role->role.getName().name()).collect(Collectors.toSet());
+
+
+    String accessToken = jwtUtils.issueToken(member.getMemberId(), member.getEmail(), member.getName(), roles, TYPE_ACCESS);
+    String refreshToken = jwtUtils.issueToken(member.getMemberId(), member.getEmail(), member.getName(), roles, TYPE_REFRESH);
 
     log.info("Created access token : {} ", accessToken);
     log.info("Created refresh token : {}", refreshToken);
@@ -82,9 +87,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     List<String> roleFromClaims = (List<String>) claimsFromRefreshToken.get("roles");
 
-    Set<Role> roles = roleFromClaims.stream()
-        .map(role->new Role(null, UserRole.valueOf(role)))
-        .collect(Collectors.toSet());
+    Set<String> roles = new HashSet<>(roleFromClaims);
 
     String accessToken = jwtUtils.issueToken(memberId, subject, name, roles, TYPE_ACCESS);
 
@@ -93,10 +96,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         .email(subject)
         .accessToken(accessToken)
         .refreshToken(refreshToken)
-        .roles(roles)
         .build();
   }
-
-
-
 }

@@ -16,5 +16,4 @@ public class LoginResponseDto {
   String refreshToken;
   String email;
   String name;
-  Set<Role> roles;
 }

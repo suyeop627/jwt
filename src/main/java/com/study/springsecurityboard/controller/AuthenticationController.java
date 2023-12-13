@@ -4,9 +4,9 @@ import com.study.springsecurityboard.domain.RefreshToken;
 import com.study.springsecurityboard.dto.LoginRequestDto;
 import com.study.springsecurityboard.dto.LoginResponseDto;
 import com.study.springsecurityboard.dto.RefreshTokenDto;
+import com.study.springsecurityboard.exception.ResourceNotFoundException;
 import com.study.springsecurityboard.service.auth.AuthenticationService;
 import com.study.springsecurityboard.service.refreshtoken.RefreshTokenService;
-import com.study.springsecurityboard.utils.member.LoginStatus;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -46,13 +46,8 @@ public class AuthenticationController {
     LoginResponseDto response = null;
     //is valid refresh token?
     //db저장 유무 확인
-    try {
     RefreshToken refreshToken = authenticationService.searchRefreshToken(refreshTokenDto.getToken())
-        .orElseThrow(() -> new IllegalArgumentException("token doesn't exist in database"));
-
-
-
-    //만료여부 확인
+        .orElseThrow(() -> new ResourceNotFoundException("token doesn't exist in database"));
 
       //acees token 재발급
       response = authenticationService.reIssueAccessToken(refreshToken.getToken());
@@ -62,14 +57,6 @@ public class AuthenticationController {
       log.info("before : {}", refreshTokenDto.getToken());
       log.info("after : {}", response.getRefreshToken());
 
-    } catch (ExpiredJwtException e) {
-      //todo : 로그인 재요청하기
-      //response = LoginResponseDto.builder().build();
-    } catch (Exception e) {
-      e.printStackTrace();
-      //response = LoginResponseDto.builder().status(LoginStatus.REFRESH_TOKEN_EXPIRED).build();
-      //todo : 처리 따로 해야함
-    }
     return ResponseEntity.ok().body(response);
   }
 
@@ -77,7 +64,7 @@ public class AuthenticationController {
   public ResponseEntity logout(@RequestBody RefreshTokenDto refreshTokenDto) {
     log.info("logout called, token : {}", refreshTokenDto.getToken());
     refreshTokenService.deleteRefreshToken(refreshTokenDto.getToken());
-    return new ResponseEntity(HttpStatus.OK);
+    return ResponseEntity.ok().build();
   }
 
 }

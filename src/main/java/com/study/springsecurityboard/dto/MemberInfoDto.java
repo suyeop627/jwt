@@ -1,11 +1,16 @@
 package com.study.springsecurityboard.dto;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 
 @Data
-public class LoginMemberInfoDto {
+@Builder
+@AllArgsConstructor
+public class MemberInfoDto {
   private Long memberId;
   private String email;
   private String name;
+  private String gender;
 
 }
