@@ -1,8 +1,9 @@
 package com.study.springsecurityboard.jwt;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.study.springsecurityboard.utils.member.LoginStatus;
+import com.study.springsecurityboard.exception.JwtAuthenticationException;
+import com.study.springsecurityboard.exception.JwtExceptionType;
 import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.MalformedJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -10,13 +11,12 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Map;
+import java.security.SignatureException;
 
 /*jwt 인증처리
  * Authentication이 있는지 ?
@@ -35,13 +35,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                   FilterChain filterChain) throws ServletException, IOException {
     log.info("JwtAuthenticationFilter activated");
 
-    if (request.getRequestURI().equals("/auth/login") || request.getRequestURI().equals("/auth/refresh")) {
-      log.info("JwtAuthenticationFilter passed because this request is for login or refresh token ");
+    //access token이 필요 없는 경우(refresh token으로 처리되거나 token을 발급 받기 위한 요청)
+    if (request.getRequestURI().equals("/auth/refresh") ||request.getRequestURI().equals("/auth/login")) {
+      log.info("JwtAuthenticationFilter passed -> {} ", request.getRequestURI());
       filterChain.doFilter(request, response);
       return;
     }
 
-    //토큰 유무 확인 -> 토큰 없으면 null 리턴
     try {
       String token = getTokenFromRequest(request);
       if(token==null){
@@ -57,24 +57,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       filterChain.doFilter(request, response);
 
     } catch (ExpiredJwtException e) {
-      log.error("Access Token received was expired");
+      request.setAttribute("exception", JwtExceptionType.EXPIRED_TOKEN.getCode());
+      log.error(JwtExceptionType.EXPIRED_TOKEN.getMessage());
+      throw new JwtAuthenticationException("throw expired token exception");
+
+    } catch (NullPointerException  | IllegalArgumentException e) {
+      log.error(JwtExceptionType.TOKEN_NOT_FOUND.getMessage());
+      request.setAttribute("exception", JwtExceptionType.TOKEN_NOT_FOUND.getCode());
+      throw new JwtAuthenticationException("throw token not found exception");
+
+    } catch (MalformedJwtException e){
+      log.error(JwtExceptionType.INVALID_TOKEN.getMessage());
+      request.setAttribute("exception", JwtExceptionType.INVALID_TOKEN.getCode());
+
+      throw new JwtAuthenticationException("throw malformed token exception");
+
+    } catch (Exception e){
+      log.error("error occurred in jwtAuthenticationFilter");
+      log.error("exception message : {}", e.getMessage());
       e.printStackTrace();
-      response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-      response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-      Map<String, String> errorMap = Map.of("error", e.getMessage(), "status", LoginStatus.ACCESS_TOKEN_EXPIRED.name());
-
-      new ObjectMapper().writeValue(response.getOutputStream(), errorMap);
-
-    } catch (Exception e) {
-
-      log.error("Error occurred : {}", e.getMessage());
-      e.printStackTrace();
-      log.error(String.valueOf(e.getCause()));
-      response.setHeader("error", e.getMessage());
-      response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-      response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-      Map<String, String> errorMap = Map.of("error", e.getMessage());
-      new ObjectMapper().writeValue(response.getOutputStream(), errorMap);
+      request.setAttribute("exception", JwtExceptionType.UNKNOWN_ERROR.getCode());
+      throw new JwtAuthenticationException("throw malformed token exception");
     }
 
   }

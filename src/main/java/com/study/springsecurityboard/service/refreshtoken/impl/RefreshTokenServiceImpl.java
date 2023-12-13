@@ -4,6 +4,7 @@ import com.study.springsecurityboard.domain.RefreshToken;
 import com.study.springsecurityboard.repository.RefreshTokenRepository;
 import com.study.springsecurityboard.service.refreshtoken.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -11,6 +12,7 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class RefreshTokenServiceImpl implements RefreshTokenService {
   private final RefreshTokenRepository refreshTokenRepository;
 
@@ -36,6 +38,19 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
 
   @Override
   public void deleteRefreshToken(String token) {
-    refreshTokenRepository.findByToken(token).ifPresent(refreshTokenRepository::delete);
+
+    Optional<RefreshToken> optionalToken = refreshTokenRepository.findByToken(token);
+    try {
+      if(optionalToken.isPresent()){
+        refreshTokenRepository.deleteById(optionalToken.get().getId());
+        log.info("logout complete, member id : {}", optionalToken.get().getMemberId());
+      }else{
+        //todo controller exception 처리
+        log.info("token not found");
+
+      }
+    }catch (Exception e){
+      e.printStackTrace();
+    }
   }
 }
