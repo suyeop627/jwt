@@ -1,6 +1,6 @@
 package com.study.securitywithjwt.config;
 
-import com.study.securitywithjwt.utils.annotation.IfUserLoggedInArgumentResolver;
+import com.study.securitywithjwt.utils.annotation.LoggedInUserInfoArgumentResolver;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
@@ -13,10 +13,10 @@ import java.util.List;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
-  private final IfUserLoggedInArgumentResolver ifUserLoggedInArgumentResolver;
+  private final LoggedInUserInfoArgumentResolver loggedInUserInfoArgumentResolver;
 
-  public WebConfig(IfUserLoggedInArgumentResolver ifUserLoggedInArgumentResolver) {
-    this.ifUserLoggedInArgumentResolver = ifUserLoggedInArgumentResolver;
+  public WebConfig(LoggedInUserInfoArgumentResolver loggedInUserInfoArgumentResolver) {
+    this.loggedInUserInfoArgumentResolver = loggedInUserInfoArgumentResolver;
   }
 
 
@@ -41,6 +41,6 @@ public class WebConfig implements WebMvcConfigurer {
 
   @Override
   public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
-    resolvers.add(ifUserLoggedInArgumentResolver);
+    resolvers.add(loggedInUserInfoArgumentResolver);
   }
 }
