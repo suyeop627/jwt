@@ -1,4 +1,4 @@
-package com.study.securitywithjwt.dao;
+package com.study.securitywithjwt.repository;
 
 import com.study.securitywithjwt.domain.RefreshToken;
 import org.springframework.data.jpa.repository.JpaRepository;

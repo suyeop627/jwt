@@ -9,9 +9,9 @@ public interface RefreshTokenService {
 
   RefreshToken insertRefreshToken(RefreshToken refreshTokenInstance);
 
-  Optional<RefreshToken> searchRefreshTokenByTokenValue(String refreshToken);
+  Optional<RefreshToken> selectRefreshTokenByTokenValue(String refreshToken);
 
-  Optional<RefreshToken> searchRefreshTokenByMemberEmail(String email);
+  Optional<RefreshToken> selectRefreshTokenByMemberEmail(String email);
 
   void deleteRefreshTokenById(Long id);
 

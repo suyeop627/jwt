@@ -11,7 +11,6 @@ import com.study.securitywithjwt.service.refreshtoken.RefreshTokenService;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -27,10 +26,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
   private final AuthenticationManager authenticationManager;
   private final JwtUtils jwtUtils;
   private final RefreshTokenService refreshTokenService;
-  @Value("${jwt.type.accessToken}")
-  private String TYPE_ACCESS;
-  @Value("${jwt.type.refreshToken}")
-  private String TYPE_REFRESH;
+  private final String TYPE_ACCESS = "ACCESS";
+  private final String TYPE_REFRESH = "REFRESH";
 
   @Override
   public LoginResponseDto login(LoginRequestDto loginRequestDto) {
@@ -40,7 +37,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         new UsernamePasswordAuthenticationToken(
             loginRequestDto.getEmail(), loginRequestDto.getPassword())
     );
-    Optional<RefreshToken> refreshTokenSavedInDB = refreshTokenService.searchRefreshTokenByMemberEmail(loginRequestDto.getEmail());
+    Optional<RefreshToken> refreshTokenSavedInDB = refreshTokenService.selectRefreshTokenByMemberEmail(loginRequestDto.getEmail());
 
     refreshTokenSavedInDB.ifPresent(refreshToken -> refreshTokenService.deleteRefreshTokenById(refreshToken.getId()));
 
@@ -70,8 +67,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         .build();
   }
   @Override
-  public Optional<RefreshToken> searchRefreshToken(String refreshToken) {
-    return refreshTokenService.searchRefreshTokenByTokenValue(refreshToken);
+  public Optional<RefreshToken> selectRefreshToken(String refreshToken) {
+    return refreshTokenService.selectRefreshTokenByTokenValue(refreshToken);
   }
 
   @Override

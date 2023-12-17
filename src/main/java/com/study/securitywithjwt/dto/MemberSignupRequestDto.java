@@ -7,13 +7,13 @@ import lombok.Data;
 
 @Data
 public class MemberSignupRequestDto {
-  @Email(message = "email format is wrong")
+  @Email
   private String email;
 
-  @Size(min=2, max=16, message = "name must be 2~ 16 characters")
+  @Size(min=2, max=16, message = "name size must be between 2 and 16")
   private String name;
 
-  @Size(min=8, max = 16, message = "password must be 8~16 characters")
+  @Size(min=8, max = 16, message = "password size must be between 8 and 16")
   private String password;
 
   private Gender gender;

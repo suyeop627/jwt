@@ -10,7 +10,7 @@ public interface AuthenticationService {
 
   LoginResponseDto login(LoginRequestDto loginRequestDto);
 
-  Optional<RefreshToken> searchRefreshToken(String refreshToken);
+  Optional<RefreshToken> selectRefreshToken(String refreshToken);
 
   LoginResponseDto reIssueAccessToken(String token);
 }

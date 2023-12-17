@@ -44,7 +44,7 @@ public class Member {
 
   @ManyToMany(fetch = FetchType.EAGER)//LazyInitializationException 방지
   @JoinTable(name = "user_role",
-      joinColumns = @JoinColumn(name = "user_id"),
+      joinColumns = @JoinColumn(name = "member_id"),
       inverseJoinColumns = @JoinColumn(name = "role_id")
   )
   @Builder.Default

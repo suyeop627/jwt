@@ -16,9 +16,5 @@ public class HomeController {
   public String home() {
     return "home";
   }
-  @PostMapping("board")
-  public String dd(@LoggedInUserInfo MemberInfo memberInfo){
-    System.out.println("memberInfo = " + memberInfo);
-    return "board";
-  }
+
 }
