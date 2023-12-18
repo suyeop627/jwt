@@ -5,6 +5,8 @@ import com.study.securitywithjwt.dto.MemberInfoDto;
 import com.study.securitywithjwt.jwt.JwtAuthenticationToken;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.MethodParameter;
+import org.springframework.security.authentication.AnonymousAuthenticationProvider;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -37,16 +39,19 @@ public class LoggedInUserInfoArgumentResolver implements HandlerMethodArgumentRe
     Authentication authentication = null;
     try{
       authentication = SecurityContextHolder.getContext().getAuthentication();
-      log.info("contextPath : {}", webRequest.getContextPath());
-      log.info("native request : {}", webRequest.getNativeRequest());
-      Object details = authentication.getDetails();
+
       if(authentication==null) {
         throw new BadCredentialsException("@IfUserLoggedIn - > authentication not found");
       }
+      if(authentication instanceof AnonymousAuthenticationToken){
+        return null;
+      }
+
     }catch (Exception e){
       e.printStackTrace();
       throw new BadCredentialsException("");
     }
+
 
     JwtAuthenticationToken jwtAuthenticationToken = (JwtAuthenticationToken) authentication;
     Object details = jwtAuthenticationToken.getDetails();

@@ -20,12 +20,13 @@ public class JwtUtils {
   private String ACCESS_TOKEN_TYPE;
   @Value("${jwt.type.refreshToken}")
   private String REFRESH_TOKEN_TYPE;
-  //private final Long ACCESS_TOKEN_DURATION =  30 * 60 * 1000L; // 30 minutes
-
-  //public final Long REFRESH_TOKEN_DURATION = 7 * 24 * 60 * 60 * 1000L; // 7 days
-
   private final Long ACCESS_TOKEN_DURATION =  30 * 60 * 1000L; // 30 minutes
-  private final Long REFRESH_TOKEN_DURATION = 30 * 60 * 1000L; // 7 days
+
+  private final Long REFRESH_TOKEN_DURATION = 7 * 24 * 60 * 60 * 1000L; // 7 days
+
+//  for test
+//  private final Long ACCESS_TOKEN_DURATION =  30 * 60 * 1000L;
+//  private final Long REFRESH_TOKEN_DURATION = 30 * 60 * 1000L;
 
 
   public String issueToken(Long memberId, String subject, String name, Set<String> roles, String type) {

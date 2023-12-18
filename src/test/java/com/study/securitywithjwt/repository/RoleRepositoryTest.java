@@ -30,8 +30,9 @@ class RoleRepositoryTest {
 
   @BeforeEach
   void setUp() {
-    roleRepository.save(new Role(1L, UserRole.ROLE_ADMIN));
-    roleRepository.save(new Role(2L, UserRole.ROLE_USER));
+//    roleRepository.save(new Role(1L, UserRole.ROLE_ADMIN));
+//    roleRepository.save(new Role(2L, UserRole.ROLE_MANAGER));
+//    roleRepository.save(new Role(3L, UserRole.ROLE_USER));
   }
   @AfterEach
   void tearDown(){
