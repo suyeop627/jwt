@@ -40,7 +40,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     Optional<RefreshToken> refreshTokenSavedInDB = refreshTokenService.selectRefreshTokenByMemberEmail(loginRequestDto.getEmail());
 
     refreshTokenSavedInDB.ifPresent(refreshToken -> refreshTokenService.deleteRefreshTokenById(refreshToken.getId()));
-
+    //principal -> MemberUserDetails
     Member member = ((MemberUserDetails) authentication.getPrincipal()).getMember();
 
 

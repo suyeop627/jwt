@@ -3,19 +3,20 @@ package com.study.securitywithjwt.service.refreshtoken.impl;
 import com.study.securitywithjwt.domain.RefreshToken;
 import com.study.securitywithjwt.repository.RefreshTokenRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.BDDMockito;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.times;
 
 @ExtendWith(MockitoExtension.class)
 class RefreshTokenServiceImplTest {
@@ -37,7 +38,7 @@ class RefreshTokenServiceImplTest {
   }
 
   @Test
-  void testInsertRefreshToken() {
+  void insertRefreshToken_validState_returnSavedRefreshToken() {
     // Given
     given(refreshTokenRepository.save(refreshToken)).willReturn(refreshToken);
 
@@ -48,9 +49,10 @@ class RefreshTokenServiceImplTest {
     assertEquals(refreshToken, result);
     then(refreshTokenRepository).should(times(1)).save(refreshToken);
   }
-
+@Nested
+class SelectRefreshToken{
   @Test
-  void testSelectRefreshTokenByTokenValue() {
+  void selectRefreshTokenByTokenValue_existToken_returnOptionalRefreshToken() {
     // Given
     String refreshTokenValue = "refreshToken_for_test";
     given(refreshTokenRepository.findByToken(refreshTokenValue)).willReturn(Optional.of(refreshToken));
@@ -62,9 +64,21 @@ class RefreshTokenServiceImplTest {
     assertEquals(Optional.of(refreshToken), result);
     then(refreshTokenRepository).should(times(1)).findByToken(refreshTokenValue);
   }
-
   @Test
-  void testSelectRefreshTokenByMemberEmail() {
+  void selectRefreshTokenByTokenValue_nonexistentToken_returnOptionalEmpty() {
+    // Given
+    String refreshTokenValue = "refreshToken_for_test";
+    given(refreshTokenRepository.findByToken(refreshTokenValue)).willReturn(Optional.empty());
+
+    // When
+    Optional<RefreshToken> result = refreshTokenService.selectRefreshTokenByTokenValue(refreshTokenValue);
+
+    // Then
+    assertThat(result).isEmpty();
+    then(refreshTokenRepository).should(times(1)).findByToken(refreshTokenValue);
+  }
+  @Test
+  void selectRefreshTokenByMemberEmail_existToken_returnOptionalRefreshToken() {
     // Given
     String email = "test@example.com";
     given(refreshTokenRepository.findRefreshTokenByMemberEmail(email)).willReturn(Optional.of(refreshToken));
@@ -76,30 +90,60 @@ class RefreshTokenServiceImplTest {
     assertEquals(Optional.of(refreshToken), result);
     then(refreshTokenRepository).should(times(1)).findRefreshTokenByMemberEmail(email);
   }
-
   @Test
-  void testDeleteRefreshTokenById() {
+  void selectRefreshTokenByMemberEmail_nonexistentToken_returnOptionalRefreshToken() {
     // Given
-    Long id = 1L;
+    String email = "test@example.com";
+    given(refreshTokenRepository.findRefreshTokenByMemberEmail(email)).willReturn(Optional.empty());
 
     // When
-    refreshTokenService.deleteRefreshTokenById(id);
+    Optional<RefreshToken> result = refreshTokenService.selectRefreshTokenByMemberEmail(email);
 
     // Then
-    then(refreshTokenRepository).should(times(1)).deleteById(id);
+    assertThat(result).isEmpty();
+    then(refreshTokenRepository).should(times(1)).findRefreshTokenByMemberEmail(email);
   }
 
-  @Test
-  void testDeleteRefreshToken() {
-    // Given
-    String token = "refreshToken_for_test";
-    given(refreshTokenRepository.findByToken(token)).willReturn(Optional.of(refreshToken));
+}
+ @Nested
+ class DeleteRefreshToken{
+   @Test
+   void deleteRefreshTokenById_validState_callDeleteById() {
+     // Given
+     Long id = 1L;
 
-    // When
-    refreshTokenService.deleteRefreshToken(token);
+     // When
+     refreshTokenService.deleteRefreshTokenById(id);
 
-    // Then
-    then(refreshTokenRepository).should(times(1)).findByToken(token);
-    then(refreshTokenRepository).should(times(1)).deleteById(refreshToken.getId());
-  }
+     // Then
+     then(refreshTokenRepository).should(times(1)).deleteById(id);
+   }
+
+   @Test
+   void deleteRefreshToken_validState_callDeleteById() {
+     // Given
+     String token = "refreshToken_for_test";
+     given(refreshTokenRepository.findByToken(token)).willReturn(Optional.of(refreshToken));
+
+     // When
+     refreshTokenService.deleteRefreshToken(token);
+
+     // Then
+     then(refreshTokenRepository).should(times(1)).findByToken(token);
+     then(refreshTokenRepository).should(times(1)).deleteById(refreshToken.getId());
+   }
+
+   @Test
+   void deleteRefreshTokenByMemberId_validState_callDeleteByMemberId(){
+     //given
+     Long memberId = 1L;
+     //when
+      refreshTokenService.deleteRefreshTokenByMemberId(memberId);
+     //then
+     then(refreshTokenRepository).should(times(1)).deleteByMemberId(memberId);
+   }
+
+ }
+
+
 }

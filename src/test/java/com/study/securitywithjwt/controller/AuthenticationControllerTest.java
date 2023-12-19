@@ -4,12 +4,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.study.securitywithjwt.domain.RefreshToken;
 import com.study.securitywithjwt.dto.LoginRequestDto;
 import com.study.securitywithjwt.dto.LoginResponseDto;
+import com.study.securitywithjwt.dto.MemberInfo;
 import com.study.securitywithjwt.dto.RefreshTokenDto;
 import com.study.securitywithjwt.exception.ErrorDto;
 import com.study.securitywithjwt.jwt.JwtAuthenticationProvider;
 import com.study.securitywithjwt.service.auth.AuthenticationService;
 import com.study.securitywithjwt.service.refreshtoken.RefreshTokenService;
+import com.study.securitywithjwt.utils.annotation.LoggedInUserInfoArgumentResolver;
 import org.hamcrest.Matchers;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -29,12 +32,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
@@ -54,8 +55,11 @@ public class AuthenticationControllerTest {
   @Autowired
   private ObjectMapper objectMapper;
 
+  @MockBean
+  private LoggedInUserInfoArgumentResolver argumentResolver;
+
   @Test
-  public void login_success() throws Exception {
+  public void login_validState_returnLoginResponseDto() throws Exception {
     // Given
     LoginRequestDto loginRequestDto = new LoginRequestDto("test@example.com", "password");
     LoginResponseDto loginResponseDto = new LoginResponseDto("accessToken", "refreshToken", loginRequestDto.getEmail(), "testName");
@@ -85,79 +89,83 @@ public class AuthenticationControllerTest {
         .andDo(MockMvcResultHandlers.print());
   }
 
-  @Test
-  public void login_emailAndPassword_validation_fail() throws Exception {
-    // Given
-    LoginRequestDto loginRequestDto = new LoginRequestDto("2", "1");
-    LoginResponseDto loginResponseDto = new LoginResponseDto("accessToken", "refreshToken", loginRequestDto.getEmail(), "testName");
-    given(authenticationService.login(loginRequestDto)).willReturn(loginResponseDto);
+  @Nested
+  class LoginValidationTest {
+    @Test
+    public void login_invalidEmailAndInvalidPassword_return400ErrorDtos() throws Exception {
+      // Given
+      LoginRequestDto loginRequestDto = new LoginRequestDto("2", "1");
+      LoginResponseDto loginResponseDto = new LoginResponseDto("accessToken", "refreshToken", loginRequestDto.getEmail(), "testName");
+      given(authenticationService.login(loginRequestDto)).willReturn(loginResponseDto);
 
-    List<ErrorDto> expectedErrors = Arrays.asList(
-        new ErrorDto("/auth/login", "must be a well-formed email address", 400, LocalDateTime.now()),
-        new ErrorDto("/auth/login", "password size must be between 8 and 16", 400, LocalDateTime.now())
-    );
+      List<ErrorDto> expectedErrors = Arrays.asList(
+          new ErrorDto("/auth/login", "must be a well-formed email address", 400, LocalDateTime.now()),
+          new ErrorDto("/auth/login", "password size must be between 8 and 16", 400, LocalDateTime.now())
+      );
 
 
-    // When
-    ResultActions response = mockMvc.perform(post("/auth/login")
-        .contentType(MediaType.APPLICATION_JSON)
-        .content(objectMapper.writeValueAsString(loginRequestDto)));
-    //then
-    response.andExpect(MockMvcResultMatchers.status().isBadRequest())
-        .andExpect(MockMvcResultMatchers.jsonPath("$", Matchers.hasSize(expectedErrors.size())))
-        .andExpect(MockMvcResultMatchers.jsonPath("$[*].path", Matchers.containsInAnyOrder(expectedErrors.stream().map(ErrorDto::getPath).toArray())))
-        .andExpect(MockMvcResultMatchers.jsonPath("$[*].message", Matchers.containsInAnyOrder(expectedErrors.stream().map(ErrorDto::getMessage).toArray())))
-        .andExpect(MockMvcResultMatchers.jsonPath("$[*].statusCode", Matchers.containsInAnyOrder(expectedErrors.stream().map(ErrorDto::getStatusCode).toArray())))
-        .andDo(MockMvcResultHandlers.print());
+      // When
+      ResultActions response = mockMvc.perform(post("/auth/login")
+          .contentType(MediaType.APPLICATION_JSON)
+          .content(objectMapper.writeValueAsString(loginRequestDto)));
+      //then
+      response.andExpect(MockMvcResultMatchers.status().isBadRequest())
+          .andExpect(MockMvcResultMatchers.jsonPath("$", Matchers.hasSize(expectedErrors.size())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$[*].path", Matchers.containsInAnyOrder(expectedErrors.stream().map(ErrorDto::getPath).toArray())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$[*].message", Matchers.containsInAnyOrder(expectedErrors.stream().map(ErrorDto::getMessage).toArray())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$[*].statusCode", Matchers.containsInAnyOrder(expectedErrors.stream().map(ErrorDto::getStatusCode).toArray())))
+          .andDo(MockMvcResultHandlers.print());
+    }
+
+    @Test
+    public void login_invalidEmail_return400ErrorDto() throws Exception {
+      // Given
+      LoginRequestDto loginRequestDto = new LoginRequestDto("2", "00000000");
+      LoginResponseDto loginResponseDto = new LoginResponseDto("accessToken", "refreshToken", loginRequestDto.getEmail(), "testName");
+      given(authenticationService.login(loginRequestDto)).willReturn(loginResponseDto);
+
+
+      ErrorDto errorDto = new ErrorDto("/auth/login", "must be a well-formed email address", 400, LocalDateTime.now());
+
+
+      // When
+      ResultActions response = mockMvc.perform(post("/auth/login")
+          .contentType(MediaType.APPLICATION_JSON)
+          .content(objectMapper.writeValueAsString(loginRequestDto)));
+      //then
+      response.andExpect(MockMvcResultMatchers.status().isBadRequest())
+          .andExpect(MockMvcResultMatchers.jsonPath("$[0].path", Matchers.is(errorDto.getPath())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$[0].message", Matchers.is(errorDto.getMessage())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$[0].statusCode", Matchers.is(errorDto.getStatusCode())))
+          .andDo(MockMvcResultHandlers.print());
+    }
+
+    @Test
+    public void login_passwordMoreThan16_return400ErrorDto() throws Exception {
+      // Given
+      LoginRequestDto loginRequestDto = new LoginRequestDto("2123@test.com", "333333333333333333333333333333");
+      LoginResponseDto loginResponseDto = new LoginResponseDto("accessToken", "refreshToken", loginRequestDto.getEmail(), "testName");
+      given(authenticationService.login(loginRequestDto)).willReturn(loginResponseDto);
+
+      ErrorDto errorDto = new ErrorDto("/auth/login", "password size must be between 8 and 16", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
+
+      // When
+      ResultActions response = mockMvc.perform(post("/auth/login")
+          .contentType(MediaType.APPLICATION_JSON)
+          .content(objectMapper.writeValueAsString(loginRequestDto)));
+      //then
+      response.andExpect(MockMvcResultMatchers.status().isBadRequest())
+          .andExpect(MockMvcResultMatchers.jsonPath("$[0].path", Matchers.is(errorDto.getPath())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$[0].message", Matchers.is(errorDto.getMessage())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$[0].statusCode", Matchers.is(errorDto.getStatusCode())))
+          .andDo(MockMvcResultHandlers.print());
+    }
+
   }
 
-  @Test
-  public void login_email_validation_fail() throws Exception {
-    // Given
-    LoginRequestDto loginRequestDto = new LoginRequestDto("2", "00000000");
-    LoginResponseDto loginResponseDto = new LoginResponseDto("accessToken", "refreshToken", loginRequestDto.getEmail(), "testName");
-    given(authenticationService.login(loginRequestDto)).willReturn(loginResponseDto);
-
-
-    ErrorDto errorDto = new ErrorDto("/auth/login", "must be a well-formed email address", 400, LocalDateTime.now());
-
-
-    // When
-    ResultActions response = mockMvc.perform(post("/auth/login")
-        .contentType(MediaType.APPLICATION_JSON)
-        .content(objectMapper.writeValueAsString(loginRequestDto)));
-    //then
-    response.andExpect(MockMvcResultMatchers.status().isBadRequest())
-        .andExpect(MockMvcResultMatchers.jsonPath("$[0].path", Matchers.is(errorDto.getPath())))
-        .andExpect(MockMvcResultMatchers.jsonPath("$[0].message", Matchers.is(errorDto.getMessage())))
-        .andExpect(MockMvcResultMatchers.jsonPath("$[0].statusCode", Matchers.is(errorDto.getStatusCode())))
-        .andDo(MockMvcResultHandlers.print());
-  }
 
   @Test
-  public void login_password_validation_fail() throws Exception {
-    // Given
-    LoginRequestDto loginRequestDto = new LoginRequestDto("2123@test.com", "333333333333333333333333333333");
-    LoginResponseDto loginResponseDto = new LoginResponseDto("accessToken", "refreshToken", loginRequestDto.getEmail(), "testName");
-    given(authenticationService.login(loginRequestDto)).willReturn(loginResponseDto);
-
-    ErrorDto errorDto = new ErrorDto("/auth/login", "password size must be between 8 and 16", 400, LocalDateTime.now());
-
-    // When
-    ResultActions response = mockMvc.perform(post("/auth/login")
-        .contentType(MediaType.APPLICATION_JSON)
-        .content(objectMapper.writeValueAsString(loginRequestDto)));
-    //then
-    response.andExpect(MockMvcResultMatchers.status().isBadRequest())
-        .andExpect(MockMvcResultMatchers.jsonPath("$[0].path", Matchers.is(errorDto.getPath())))
-        .andExpect(MockMvcResultMatchers.jsonPath("$[0].message", Matchers.is(errorDto.getMessage())))
-        .andExpect(MockMvcResultMatchers.jsonPath("$[0].statusCode", Matchers.is(errorDto.getStatusCode())))
-        .andDo(MockMvcResultHandlers.print());
-  }
-
-
-  @Test
-  void reIssueAccessToken_throwResourceNotFound() throws Exception {
+  void reIssueAccessToken_nonexistentToken_return404ErrorDto() throws Exception {
     //given
     RefreshTokenDto refreshTokenDto = new RefreshTokenDto();
     refreshTokenDto.setToken("refreshToken_for_test");
@@ -182,7 +190,7 @@ public class AuthenticationControllerTest {
 
 
   @Test
-  void reIssueAccessToken_success() throws Exception {
+  void reIssueAccessToken_validState_returnLoginResponseDto() throws Exception {
     //given
     RefreshTokenDto refreshTokenDto = new RefreshTokenDto();
     refreshTokenDto.setToken("refreshToken_for_test");
@@ -207,18 +215,35 @@ public class AuthenticationControllerTest {
 
     then(authenticationService).should(times(1)).reIssueAccessToken(anyString());
   }
+
   @Test
-  void logout_success() throws Exception {
+  void logout_validState_deleteTokenInDB() throws Exception {
     //given
-    RefreshTokenDto refreshTokenDto = new RefreshTokenDto();
-    refreshTokenDto.setToken("refreshToken");
+    MemberInfo loggedInMember = new MemberInfo();
+    loggedInMember.setMemberId(1L);
+    given(argumentResolver.supportsParameter(any())).willReturn(true);
+    given(argumentResolver.resolveArgument(any(), any(), any(), any())).willReturn(loggedInMember);
+
     //when
     ResultActions response = mockMvc.perform(delete("/auth/logout")
-        .contentType(MediaType.APPLICATION_JSON)
-        .content(objectMapper.writeValueAsString(refreshTokenDto)));
+        .header("authorization", "token"));
     //then
     response.andExpect(MockMvcResultMatchers.status().isOk())
         .andDo(MockMvcResultHandlers.print());
-    then(refreshTokenService).should(times(1)).deleteRefreshToken(anyString());
+    then(refreshTokenService).should(times(1)).deleteRefreshTokenByMemberId(loggedInMember.getMemberId());
+  }
+
+  @Test
+  void logout_noToken_throwBadRequestException() throws Exception {
+    //given
+    given(argumentResolver.supportsParameter(any())).willReturn(true);
+    given(argumentResolver.resolveArgument(any(), any(), any(), any())).willReturn(null);
+
+    //when
+    ResultActions response = mockMvc.perform(delete("/auth/logout"));
+    //then
+    response.andExpect(MockMvcResultMatchers.status().isBadRequest())
+        .andDo(MockMvcResultHandlers.print());
+    then(refreshTokenService).shouldHaveNoInteractions();
   }
 }

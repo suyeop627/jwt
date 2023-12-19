@@ -12,4 +12,6 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken,Long>
 
   @Query("SELECT r FROM RefreshToken r JOIN Member m ON m.memberId=r.memberId WHERE m.email = :email")
   Optional<RefreshToken> findRefreshTokenByMemberEmail(@Param("email") String email);
+
+  void deleteByMemberId(Long memberId);
 }

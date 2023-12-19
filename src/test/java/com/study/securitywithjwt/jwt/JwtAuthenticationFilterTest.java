@@ -1,8 +1,6 @@
 package com.study.securitywithjwt.jwt;
 
 import com.study.securitywithjwt.exception.JwtAuthenticationException;
-import com.study.securitywithjwt.exception.JwtExceptionType;
-import com.study.securitywithjwt.exception.ResourceDuplicatedException;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -14,17 +12,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.mock.web.MockFilterChain;
-import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.mock.web.MockHttpServletResponse;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 
 import java.io.IOException;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.*;
@@ -50,7 +41,7 @@ class JwtAuthenticationFilterTest {
 
 
   @Test
-  void testDoFilterInternal_RefreshTokenRequest() throws ServletException, IOException {
+  void doFilterInternal_requestForRefreshToken_passFilter() throws ServletException, IOException {
     // Given
     given(request.getRequestURI()).willReturn("/auth/refresh");
 
@@ -63,7 +54,7 @@ class JwtAuthenticationFilterTest {
   }
 
   @Test
-  void testDoFilterInternal_LoginRequest() throws ServletException, IOException {
+  void doFilterInternal_requestForLogin_passFilter() throws ServletException, IOException {
     // Given
     given(request.getRequestURI()).willReturn("/auth/login");
 
@@ -76,7 +67,7 @@ class JwtAuthenticationFilterTest {
   }
 
   @Test
-  void testDoFilterInternal_noToken() throws ServletException, IOException {
+  void doFilterInternal_noTokenInHeader_passFilter() throws ServletException, IOException {
     // Given
     given(request.getRequestURI()).willReturn("/api");
 
@@ -90,7 +81,7 @@ class JwtAuthenticationFilterTest {
   }
 
   @Test
-  void testDoFilterInternal_ExpiredToken() {
+  void doFilterInternal_expiredToken_throwExpiredJwtException() {
     // Given
     given(request.getRequestURI()).willReturn("/api");
     given(request.getHeader("Authorization")).willReturn("Bearer expired-token");
@@ -101,5 +92,4 @@ class JwtAuthenticationFilterTest {
             jwtAuthenticationFilter.doFilterInternal(request, response, filterChain));
     then(filterChain).shouldHaveNoInteractions();
   }
-  //TODO : provider 테스트 후 예외 테스팅 추가
 }

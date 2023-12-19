@@ -9,6 +9,7 @@ import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SignatureException;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -38,7 +39,7 @@ class JwtUtilsTest {
 
 
   @Test
-  void issueToken() {
+  void issueToken_validState_returnJwt() {
     //given
     Long memberId = 1L;
     String subject = "test@test.com";
@@ -47,16 +48,16 @@ class JwtUtilsTest {
     String type = ACCESS_TOKEN_TYPE;
     //when
     String issuedToken = jwtUtils.issueToken(memberId, subject, name, roles, type);
-    System.out.println("issuedToken = " + issuedToken);
-    Claims claimsFromIssuedToken = jwtUtils.getClaimsFromAccessToken(issuedToken);
+
     //then
+    Claims claimsFromIssuedToken = jwtUtils.getClaimsFromAccessToken(issuedToken);
     assertThat(claimsFromIssuedToken.getSubject()).isEqualTo(subject);
     assertThat(claimsFromIssuedToken.get("name")).isEqualTo(name);
     assertThat(claimsFromIssuedToken.get("roles")).isEqualTo(new ArrayList<>(roles));//Claims는 기본적으로 arraylist로 저장함
   }
 
   @Test
-  void getClaimsFromAccessToken() throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
+  void getClaimsFromAccessToken_validState_returnClaims() throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
     //given
     Long ACCESS_TOKEN_DURATION_FOR_TEST = 1000000L;
 
@@ -73,10 +74,9 @@ class JwtUtilsTest {
     String name = "testName";
     Set<String> roles = Set.of("ROLE_USER", "ROLE_ADMIN");
     String type = ACCESS_TOKEN_TYPE;
+    String issuedToken = jwtUtils.issueToken(memberId, subject, name, roles, type);
 
     //when
-    String issuedToken = jwtUtils.issueToken(memberId, subject, name, roles, type);
-    System.out.println("issuedToken = " + issuedToken);
     Claims claimsFromIssuedToken = jwtUtils.getClaimsFromAccessToken(issuedToken);
 
     //then
@@ -86,7 +86,7 @@ class JwtUtilsTest {
   }
 
   @Test
-  void getClaimsFromRefreshToken() throws IllegalAccessException, NoSuchFieldException {
+  void getClaimsFromRefreshToken_validState_returnClaims() throws IllegalAccessException, NoSuchFieldException {
     //given
     Long REFRESH_TOKEN_DURATION_FOR_TEST = 1000000L;
 
@@ -100,10 +100,9 @@ class JwtUtilsTest {
     String name = "testName";
     Set<String> roles = Set.of("ROLE_USER", "ROLE_ADMIN");
     String type = REFRESH_TOKEN_TYPE;
+    String issuedToken = jwtUtils.issueToken(memberId, subject, name, roles, type);
 
     //when
-    String issuedToken = jwtUtils.issueToken(memberId, subject, name, roles, type);
-    System.out.println("issuedToken = " + issuedToken);
     Claims claimsFromIssuedToken = jwtUtils.getClaimsFromRefreshToken(issuedToken);
 
     //then
@@ -112,64 +111,65 @@ class JwtUtilsTest {
         .isEqualTo(new Date(claimsFromIssuedToken.getIssuedAt().getTime()+REFRESH_TOKEN_DURATION_FOR_TEST));
   }
 
-  @Test
-  void getClaimsFromAccessToken_throwExpiredJwtException() {
-    //given
-    String token_expired = Jwts.builder()
-        .subject("test")
-        .issuedAt(new Date())
-        .expiration(new Date(new Date().getTime()-100))
-        .claim("name", "name")
-        .claim("roles", Set.of("ROLE_USER"))
-        .claim("memberId", 1L)
-        .signWith(Keys.hmacShaKeyFor(ACCESS_TOKEN_KEY_FOR_TEST.getBytes()))
-        .compact();
+  @Nested
+  class TokenExceptionTest{
+    @Test
+    void getClaimsFromAccessToken_expiredToken_throwExpiredJwtException() {
+      //given
+      String token_expired = Jwts.builder()
+          .subject("test")
+          .issuedAt(new Date())
+          .expiration(new Date(new Date().getTime()-100))
+          .claim("name", "name")
+          .claim("roles", Set.of("ROLE_USER"))
+          .claim("memberId", 1L)
+          .signWith(Keys.hmacShaKeyFor(ACCESS_TOKEN_KEY_FOR_TEST.getBytes()))
+          .compact();
 
-    //when, then
-    assertThatThrownBy(() -> jwtUtils.getClaimsFromAccessToken(token_expired)).isInstanceOf(ExpiredJwtException.class);
+      //when, then
+      assertThatThrownBy(() -> jwtUtils.getClaimsFromAccessToken(token_expired)).isInstanceOf(ExpiredJwtException.class);
 
+    }
+
+    @Test
+    void getClaimsFromAccessToken_tokenNullOrEmpty_throwIllegalArgumentException() {
+      //given
+      String token_illegalArgs1 = " ";
+      String token_null = null;
+
+      //when, then
+      assertThatThrownBy(() -> jwtUtils.getClaimsFromAccessToken(token_illegalArgs1)).isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(() -> jwtUtils.getClaimsFromAccessToken(token_null)).isInstanceOf(IllegalArgumentException.class);
+    }
+    @Test
+    void getClaimsFromAccessToken_InvalidSignature_throwSignatureException() {
+      //given
+      String token_signatureInvalid= Jwts.builder()
+          .subject("test")
+          .issuedAt(new Date())
+          .expiration(new Date(new Date().getTime()-100))
+          .claim("name", "name")
+          .claim("roles", Set.of("ROLE_USER"))
+          .claim("memberId", 1L)
+          .signWith(Jwts.SIG.HS256.key().build())
+          .compact();
+
+      //when, then
+      assertThatThrownBy(() -> jwtUtils.getClaimsFromAccessToken(token_signatureInvalid)).isInstanceOf(SignatureException.class);
+    }
+
+    @Test
+    void getClaimsFromAccessToken_JsonFromMapOrBase64EncodedJsonFromMap_throwMalformedJwtException() throws JsonProcessingException {
+      //given
+      ObjectMapper objectMapper = new ObjectMapper();
+      Map<String, String> map = Map.of("a", "b");
+      String token_malFormed_anywayJson = objectMapper.writeValueAsString(map);
+      String token_malFormed2_anywayBase64 = Base64.getEncoder().encodeToString(token_malFormed_anywayJson.getBytes());
+
+      //when, then
+      assertThatThrownBy(() -> jwtUtils.getClaimsFromAccessToken(token_malFormed_anywayJson)).isInstanceOf(MalformedJwtException.class);
+      assertThatThrownBy(() -> jwtUtils.getClaimsFromAccessToken(token_malFormed2_anywayBase64)).isInstanceOf(MalformedJwtException.class);
+    }
   }
 
-  @Test
-  void getClaimsFromAccessToken_throwIllegalArgumentException() {
-    //given
-    //CharSequence cannot be null or empty
-    String token_illegalArgs1 = " ";
-    String token_null = null;
-
-    //when, then
-    assertThatThrownBy(() -> jwtUtils.getClaimsFromAccessToken(token_illegalArgs1)).isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(() -> jwtUtils.getClaimsFromAccessToken(token_null)).isInstanceOf(IllegalArgumentException.class);
-  }
-  @Test
-  void getClaimsFromAccessToken_throwSignatureException() {
-    //given
-    String token_signatureInvalid= Jwts.builder()
-        .subject("test")
-        .issuedAt(new Date())
-        .expiration(new Date(new Date().getTime()-100))
-        .claim("name", "name")
-        .claim("roles", Set.of("ROLE_USER"))
-        .claim("memberId", 1L)
-        .signWith(Jwts.SIG.HS256.key().build())
-        .compact();
-
-    //when, then
-    assertThatThrownBy(() -> jwtUtils.getClaimsFromAccessToken(token_signatureInvalid)).isInstanceOf(SignatureException.class);
-
-  }
-
-
-  @Test
-  void getClaimsFromAccessToken_throwMalformedJwtException() throws JsonProcessingException {
-    //given
-    ObjectMapper objectMapper = new ObjectMapper();
-    Map<String, String> map = Map.of("a", "b");
-    String token_malFormed_anywayJson = objectMapper.writeValueAsString(map);
-    String token_malFormed2_anywayBase64 = Base64.getEncoder().encodeToString(token_malFormed_anywayJson.getBytes());
-
-    //when, then
-    assertThatThrownBy(() -> jwtUtils.getClaimsFromAccessToken(token_malFormed_anywayJson)).isInstanceOf(MalformedJwtException.class);
-    assertThatThrownBy(() -> jwtUtils.getClaimsFromAccessToken(token_malFormed2_anywayBase64)).isInstanceOf(MalformedJwtException.class);
-  }
 }

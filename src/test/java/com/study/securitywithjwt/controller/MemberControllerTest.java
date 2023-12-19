@@ -1,9 +1,6 @@
 package com.study.securitywithjwt.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.study.securitywithjwt.domain.Member;
-import com.study.securitywithjwt.dto.LoginRequestDto;
-import com.study.securitywithjwt.dto.LoginResponseDto;
 import com.study.securitywithjwt.dto.MemberSignupRequestDto;
 import com.study.securitywithjwt.dto.MemberSignupResponseDto;
 import com.study.securitywithjwt.exception.ErrorDto;
@@ -11,6 +8,7 @@ import com.study.securitywithjwt.jwt.JwtAuthenticationProvider;
 import com.study.securitywithjwt.service.member.MemberService;
 import com.study.securitywithjwt.utils.member.Gender;
 import org.hamcrest.Matchers;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -31,13 +29,9 @@ import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.endsWith;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 @ExtendWith(MockitoExtension.class)
@@ -60,7 +54,7 @@ class MemberControllerTest {
   ObjectMapper objectMapper;
 
   @Test
-  void signup_success() throws Exception {
+  void signup_validState_returnSignupResponseDto() throws Exception {
     //given
     MemberSignupRequestDto memberSignupRequestDto = new MemberSignupRequestDto();
     memberSignupRequestDto.setGender(Gender.MALE);
@@ -97,115 +91,114 @@ class MemberControllerTest {
     //Matchers.is / equalTo- 타입, 값 정확하게 확인
   }
 
-  @Test
-  public void signup_emailAndPasswordAndName_validation_fail() throws Exception {
-    // Given
-    MemberSignupRequestDto signupRequestDto = new MemberSignupRequestDto();
-    signupRequestDto.setPassword("1");
-    signupRequestDto.setEmail("a");
-    signupRequestDto.setGender(Gender.MALE);
-    signupRequestDto.setName("1");
+  @Nested
+  class SignUpValidationTest {
+    @Test
+    public void signup_invalidEmailAndPasswordAndName_return400ErrorDtos() throws Exception {
+      // Given
+      MemberSignupRequestDto signupRequestDto = new MemberSignupRequestDto();
+      signupRequestDto.setPassword("1");
+      signupRequestDto.setEmail("a");
+      signupRequestDto.setGender(Gender.MALE);
+      signupRequestDto.setName("1");
 
-    List<ErrorDto> expectedErrors = Arrays.asList(
-        new ErrorDto("/members", "must be a well-formed email address", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now()),
-        new ErrorDto("/members", "password size must be between 8 and 16", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now()),
-        new ErrorDto("/members", "name size must be between 2 and 16", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now())
-    );
+      List<ErrorDto> expectedErrors = Arrays.asList(
+          new ErrorDto("/members", "must be a well-formed email address", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now()),
+          new ErrorDto("/members", "password size must be between 8 and 16", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now()),
+          new ErrorDto("/members", "name size must be between 2 and 16", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now())
+      );
 
-    // When
-    ResultActions response = mockMvc.perform(post("/members")
-        .contentType(MediaType.APPLICATION_JSON)
-        .content(objectMapper.writeValueAsString(signupRequestDto)));
-    //then
-    response.andExpect(MockMvcResultMatchers.status().isBadRequest())
-        .andExpect(MockMvcResultMatchers.jsonPath("$", Matchers.hasSize(expectedErrors.size())))
-        .andExpect(MockMvcResultMatchers.jsonPath("$[*].path", Matchers.containsInAnyOrder(expectedErrors.stream().map(ErrorDto::getPath).toArray())))
-        .andExpect(MockMvcResultMatchers.jsonPath("$[*].message", Matchers.containsInAnyOrder(expectedErrors.stream().map(ErrorDto::getMessage).toArray())))
-        .andExpect(MockMvcResultMatchers.jsonPath("$[*].statusCode", Matchers.containsInAnyOrder(expectedErrors.stream().map(ErrorDto::getStatusCode).toArray())))
-        .andDo(MockMvcResultHandlers.print());
+      // When
+      ResultActions response = mockMvc.perform(post("/members")
+          .contentType(MediaType.APPLICATION_JSON)
+          .content(objectMapper.writeValueAsString(signupRequestDto)));
+      //then
+      response.andExpect(MockMvcResultMatchers.status().isBadRequest())
+          .andExpect(MockMvcResultMatchers.jsonPath("$", Matchers.hasSize(expectedErrors.size())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$[*].path", Matchers.containsInAnyOrder(expectedErrors.stream().map(ErrorDto::getPath).toArray())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$[*].message", Matchers.containsInAnyOrder(expectedErrors.stream().map(ErrorDto::getMessage).toArray())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$[*].statusCode", Matchers.containsInAnyOrder(expectedErrors.stream().map(ErrorDto::getStatusCode).toArray())))
+          .andDo(MockMvcResultHandlers.print());
 
-    then(memberService).shouldHaveNoInteractions();
+      then(memberService).shouldHaveNoInteractions();
 
-  }
+    }
 
-  @Test
-  public void signup_password_validation_fail() throws Exception {
-    // Given
-    MemberSignupRequestDto signupRequestDto = new MemberSignupRequestDto();
-    signupRequestDto.setPassword("2");
-    signupRequestDto.setEmail("test@test.com");
-    signupRequestDto.setGender(Gender.MALE);
-    signupRequestDto.setName("testName");
+    @Test
+    public void signup_passwordLessThan8_return400ErrorDto() throws Exception {
+      // Given
+      MemberSignupRequestDto signupRequestDto = new MemberSignupRequestDto();
+      signupRequestDto.setPassword("2");
+      signupRequestDto.setEmail("test@test.com");
+      signupRequestDto.setGender(Gender.MALE);
+      signupRequestDto.setName("testName");
 
-    ErrorDto errorDto = new ErrorDto("/members", "password size must be between 8 and 16", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
-
-
-    // When
-    ResultActions response = mockMvc.perform(post("/members")
-        .contentType(MediaType.APPLICATION_JSON)
-        .content(objectMapper.writeValueAsString(signupRequestDto)));
-    //then
-    response.andExpect(MockMvcResultMatchers.status().isBadRequest())
-        .andExpect(MockMvcResultMatchers.jsonPath("$[0].path", Matchers.is(errorDto.getPath())))
-        .andExpect(MockMvcResultMatchers.jsonPath("$[0].message", Matchers.is(errorDto.getMessage())))
-        .andExpect(MockMvcResultMatchers.jsonPath("$[0].statusCode", Matchers.is(errorDto.getStatusCode())))
-        .andDo(MockMvcResultHandlers.print());
-
-    then(memberService).shouldHaveNoInteractions();
-
-  }
+      ErrorDto errorDto = new ErrorDto("/members", "password size must be between 8 and 16", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
 
 
-  @Test
-  public void signup_name_validation_fail() throws Exception {
-    // Given
-    MemberSignupRequestDto signupRequestDto = new MemberSignupRequestDto();
-    signupRequestDto.setPassword("3123123123");
-    signupRequestDto.setEmail("test@test.com");
-    signupRequestDto.setGender(Gender.MALE);
-    signupRequestDto.setName("2");
+      // When
+      ResultActions response = mockMvc.perform(post("/members")
+          .contentType(MediaType.APPLICATION_JSON)
+          .content(objectMapper.writeValueAsString(signupRequestDto)));
+      //then
+      compareResponseWithSingleExpectedErrorDto(errorDto, response);
 
-    ErrorDto errorDto = new ErrorDto("/members", "name size must be between 2 and 16", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
-    // When
-    ResultActions response = mockMvc.perform(post("/members")
-        .contentType(MediaType.APPLICATION_JSON)
-        .content(objectMapper.writeValueAsString(signupRequestDto)));
+      then(memberService).shouldHaveNoInteractions();
 
-    //then
-    response.andExpect(MockMvcResultMatchers.status().isBadRequest())
-        .andExpect(MockMvcResultMatchers.jsonPath("$[0].path", Matchers.is(errorDto.getPath())))
-        .andExpect(MockMvcResultMatchers.jsonPath("$[0].message", Matchers.is(errorDto.getMessage())))
-        .andExpect(MockMvcResultMatchers.jsonPath("$[0].statusCode", Matchers.is(errorDto.getStatusCode())))
-        .andDo(MockMvcResultHandlers.print());
-
-    then(memberService).shouldHaveNoInteractions();
-
-  }
+    }
 
 
-  @Test
-  public void signup_email_validation_fail() throws Exception {
-    // Given
-    MemberSignupRequestDto signupRequestDto = new MemberSignupRequestDto();
-    signupRequestDto.setPassword("323333123");
-    signupRequestDto.setEmail("1");
-    signupRequestDto.setGender(Gender.MALE);
-    signupRequestDto.setName("testName");
+    @Test
+    public void signup_nameLessThen2_return400ErrorDto() throws Exception {
+      // Given
+      MemberSignupRequestDto signupRequestDto = new MemberSignupRequestDto();
+      signupRequestDto.setPassword("3123123123");
+      signupRequestDto.setEmail("test@test.com");
+      signupRequestDto.setGender(Gender.MALE);
+      signupRequestDto.setName("2");
 
-    ErrorDto errorDto = new ErrorDto("/members", "must be a well-formed email address", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
+      ErrorDto errorDto = new ErrorDto("/members", "name size must be between 2 and 16", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
+      // When
+      ResultActions response = mockMvc.perform(post("/members")
+          .contentType(MediaType.APPLICATION_JSON)
+          .content(objectMapper.writeValueAsString(signupRequestDto)));
 
-    // When
-    ResultActions response = mockMvc.perform(post("/members")
-        .contentType(MediaType.APPLICATION_JSON)
-        .content(objectMapper.writeValueAsString(signupRequestDto)));
-    //then
-    response.andExpect(MockMvcResultMatchers.status().isBadRequest())
-        .andExpect(MockMvcResultMatchers.jsonPath("$[0].path", Matchers.is(errorDto.getPath())))
-        .andExpect(MockMvcResultMatchers.jsonPath("$[0].message", Matchers.is(errorDto.getMessage())))
-        .andExpect(MockMvcResultMatchers.jsonPath("$[0].statusCode", Matchers.is(errorDto.getStatusCode())))
-        .andDo(MockMvcResultHandlers.print());
+      //then
+      compareResponseWithSingleExpectedErrorDto(errorDto, response);
 
-    then(memberService).shouldHaveNoInteractions();
+      then(memberService).shouldHaveNoInteractions();
+
+    }
+
+
+    @Test
+    public void signup_invalidEmail_return400errorDto() throws Exception {
+      // Given
+      MemberSignupRequestDto signupRequestDto = new MemberSignupRequestDto();
+      signupRequestDto.setPassword("323333123");
+      signupRequestDto.setEmail("1");
+      signupRequestDto.setGender(Gender.MALE);
+      signupRequestDto.setName("testName");
+
+      ErrorDto errorDto = new ErrorDto("/members", "must be a well-formed email address", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
+
+      // When
+      ResultActions response = mockMvc.perform(post("/members")
+          .contentType(MediaType.APPLICATION_JSON)
+          .content(objectMapper.writeValueAsString(signupRequestDto)));
+      //then
+      compareResponseWithSingleExpectedErrorDto(errorDto, response);
+
+      then(memberService).shouldHaveNoInteractions();
+    }
+
+    private void compareResponseWithSingleExpectedErrorDto(ErrorDto errorDto, ResultActions response) throws Exception {
+      response.andExpect(MockMvcResultMatchers.status().isBadRequest())
+          .andExpect(MockMvcResultMatchers.jsonPath("$[0].path", Matchers.is(errorDto.getPath())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$[0].message", Matchers.is(errorDto.getMessage())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$[0].statusCode", Matchers.is(errorDto.getStatusCode())))
+          .andDo(MockMvcResultHandlers.print());
+    }
   }
 
 

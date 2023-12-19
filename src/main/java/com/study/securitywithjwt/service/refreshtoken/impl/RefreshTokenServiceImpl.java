@@ -44,13 +44,14 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
       if(optionalToken.isPresent()){
         refreshTokenRepository.deleteById(optionalToken.get().getId());
         log.info("logout complete, member id : {}", optionalToken.get().getMemberId());
-      }else{
-        //todo controller exception 처리
-        log.info("token not found");
-
       }
     }catch (Exception e){
       e.printStackTrace();
     }
+  }
+
+  @Override
+  public void deleteRefreshTokenByMemberId(Long memberId) {
+    refreshTokenRepository.deleteByMemberId(memberId);
   }
 }

@@ -4,17 +4,19 @@ import com.study.securitywithjwt.domain.Member;
 import com.study.securitywithjwt.domain.Role;
 import com.study.securitywithjwt.utils.member.Gender;
 import com.study.securitywithjwt.utils.member.UserRole;
-import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.Set;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 
 //@ActiveProfiles("test")
@@ -49,30 +51,32 @@ class MemberRepositoryTest {
     memberRepository.save(member1);
     memberRepository.save(member2);
   }
-@AfterEach
-void tearDown(){
+
+  @AfterEach
+  void tearDown() {
     memberRepository.deleteAll();
-}
+  }
 
   @Test
-  void MemberRepository_findByEmail_ReturnOptionalMember() {
+  void findByEmail_validState_returnOptionalMember() {
     Optional<Member> foundMember = memberRepository.findByEmail("member1@test.com");
-    System.out.println("==========foundMember========");
-    System.out.println("foundMember = " + foundMember);
-
-    Assertions.assertThat(foundMember.isPresent()).isTrue();
-    Assertions.assertThat((foundMember.get())).isEqualTo(member1);
+    assertThat(foundMember.isPresent()).isTrue();
+    assertThat((foundMember.get())).isEqualTo(member1);
   }
 
-  @Test
-  void existsMemberByEmail_noneExist() {
-    boolean existsMemberByEmail = memberRepository.existsMemberByEmail("member3@test.com");
-    Assertions.assertThat(existsMemberByEmail).isFalse();
+  @Nested
+  class existsMemberByEmail {
+    @Test
+    void existsMemberByEmail_nonexistentEmail_returnFalse() {
+      boolean existsMemberByEmail = memberRepository.existsMemberByEmail("member3@test.com");
+      assertThat(existsMemberByEmail).isFalse();
+    }
+
+    @Test
+    void existsMemberByEmail_existEmail_returnTrue() {
+      boolean existsMemberByEmail = memberRepository.existsMemberByEmail("member1@test.com");
+      assertThat(existsMemberByEmail).isTrue();
+    }
   }
 
-  @Test
-  void existsMemberByEmail_exist() {
-    boolean existsMemberByEmail = memberRepository.existsMemberByEmail("member1@test.com");
-    Assertions.assertThat(existsMemberByEmail).isTrue();
-  }
 }

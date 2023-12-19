@@ -3,25 +3,23 @@ package com.study.securitywithjwt.repository;
 import com.study.securitywithjwt.domain.Member;
 import com.study.securitywithjwt.domain.RefreshToken;
 import com.study.securitywithjwt.domain.Role;
-import com.study.securitywithjwt.jwt.JwtUtils;
 import com.study.securitywithjwt.utils.member.Gender;
 import com.study.securitywithjwt.utils.member.UserRole;
 import io.jsonwebtoken.Jwts;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.Optional;
 import java.util.Set;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 
 //@ActiveProfiles("test")
@@ -34,6 +32,7 @@ class RefreshTokenRepositoryTest {
   @Autowired
   MemberRepository memberRepository;
   String token;
+  Member savedMember;
   @BeforeEach
   void setUp() {
     Member member1 = Member.builder()
@@ -43,7 +42,7 @@ class RefreshTokenRepositoryTest {
         .roles(Set.of(new Role(1L, UserRole.ROLE_ADMIN)))
         .regdate(LocalDateTime.now())
         .build();
-    Member savedMember = memberRepository.save(member1);
+   savedMember = memberRepository.save(member1);
 
     token = Jwts.builder()
         .subject("member1@test.com")
@@ -56,35 +55,74 @@ class RefreshTokenRepositoryTest {
     refreshTokenRepository.save(refreshToken);
 
   }
+
   @AfterEach
-  void tearDown(){
+  void tearDown() {
     refreshTokenRepository.deleteAll();
     memberRepository.deleteAll();
   }
 
+  @Nested
+  class findByToken {
+    @Test
+    void findByToken_existToken_returnOptionalRefreshToken() {
+      //given - beforeEach
+      //when
+      Optional<RefreshToken> refreshTokenFoundByToken = refreshTokenRepository.findByToken(token);
+      //then
+      assertThat(refreshTokenFoundByToken.isPresent()).isTrue();
+    }
 
-  @Test
-  void findByToken_returnOptionalRefreshToken() {
-    Optional<RefreshToken> refreshTokenFoundByToken = refreshTokenRepository.findByToken(token);
-    Assertions.assertThat(refreshTokenFoundByToken.isPresent()).isTrue();
+    @Test
+    void findByToken_nonexistentToken_returnOptionalEmpty() {
+      //given
+      token = token + 1; //token not saved
+      //when
+      Optional<RefreshToken> refreshTokenFoundByToken = refreshTokenRepository.findByToken(token);
+      //then
+      assertThat(refreshTokenFoundByToken.isEmpty()).isTrue();
+    }
   }
 
+  @Nested
+  class findRefreshTokenByMemberEmail {
+    @Test
+    void findRefreshTokenByMemberEmail_existEmail_returnOptionalRefreshToken() {
+      //given
+      String memberEmail =savedMember.getEmail(); //saved email
+      //when
+      Optional<RefreshToken> refreshTokenFoundByEmail = refreshTokenRepository.findRefreshTokenByMemberEmail(memberEmail);
+      //then
+      assertThat(refreshTokenFoundByEmail.isPresent()).isTrue();
+    }
+
+    @Test
+    void findRefreshTokenByMemberEmail_nonexistentEmail_returnOptionalEmpty() {
+      //given
+      String memberEmail = "member2@test.com"; //email not saved
+      //when
+      Optional<RefreshToken> refreshTokenFoundByEmail = refreshTokenRepository.findRefreshTokenByMemberEmail(memberEmail);
+      //when
+      assertThat(refreshTokenFoundByEmail.isEmpty()).isTrue();
+    }
+  }
   @Test
-  void findByToken_returnOptionalEmpty() {
-    Optional<RefreshToken> refreshTokenFoundByToken = refreshTokenRepository.findByToken(token+"1");
-    Assertions.assertThat(refreshTokenFoundByToken.isEmpty()).isTrue();
+  void deleteByMemberId_validState_deleteRefreshToken(){
+    //given
+    Long memberId = savedMember.getMemberId();
+    //when
+    refreshTokenRepository.deleteByMemberId(memberId);
+    //then
+    assertThat(refreshTokenRepository.count() == 0).isTrue();
+  }
+  @Test
+  void deleteByMemberId_noneExistentMemberId_deleteRefreshToken(){
+    //given
+    Long memberId = 100L;
+    //when
+    refreshTokenRepository.deleteByMemberId(memberId);
+    //then
+    assertThat(refreshTokenRepository.count() == 1).isTrue();
   }
 
-
-  @Test
-  void findRefreshTokenByMemberEmail_returnOptionalRefreshToken() {
-    Optional<RefreshToken> refreshTokenFoundByEmail = refreshTokenRepository.findRefreshTokenByMemberEmail("member1@test.com");
-    Assertions.assertThat(refreshTokenFoundByEmail.isPresent()).isTrue();
-  }
-
-  @Test
-  void findRefreshTokenByMemberEmail_returnOptionalEmpty() {
-    Optional<RefreshToken> refreshTokenFoundByEmail = refreshTokenRepository.findRefreshTokenByMemberEmail("member2@test.com");
-    Assertions.assertThat(refreshTokenFoundByEmail.isEmpty()).isTrue();
-  }
 }

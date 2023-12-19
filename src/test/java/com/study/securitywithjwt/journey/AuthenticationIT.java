@@ -33,7 +33,7 @@ public class AuthenticationIT {
   private WebTestClient webTestClient;
 
   @Test
-  void loginIT(){
+  void loginAndSignupIT(){
     String email = "test123@test.com";
     String password = "00000000"; //password size is too short
     LoginRequestDto loginRequestDto = new LoginRequestDto(email, password);
@@ -46,10 +46,7 @@ public class AuthenticationIT {
 
 
     //before signup
-    webTestClient.post()
-        .uri("/auth/login")
-        .bodyValue(loginRequestDto)
-        .exchange()
+    postLoginRequestWithLoginRequestDto(loginRequestDto)
         .expectStatus()
         .isUnauthorized();
 
@@ -57,20 +54,15 @@ public class AuthenticationIT {
     //sign up - email malformed
     signupRequestDto.setEmail("test");
     signupRequestDto.setPassword("00000000");
-    webTestClient.post()
-        .uri("/members")
-        .bodyValue(signupRequestDto)
-        .exchange()
+
+    postSignUpRequestWIthSignupRequestDto(signupRequestDto)
         .expectStatus()
         .isBadRequest();
 
     //sign up - password malformed
     signupRequestDto.setEmail("test@test.com");
     signupRequestDto.setPassword("000");
-    webTestClient.post()
-        .uri("/members")
-        .bodyValue(signupRequestDto)
-        .exchange()
+    postSignUpRequestWIthSignupRequestDto(signupRequestDto)
         .expectStatus()
         .isBadRequest();
 
@@ -78,10 +70,7 @@ public class AuthenticationIT {
     signupRequestDto.setEmail("test@test.com");
     signupRequestDto.setPassword("00000000");
     signupRequestDto.setName("d");
-    webTestClient.post()
-        .uri("/members")
-        .bodyValue(signupRequestDto)
-        .exchange()
+    postSignUpRequestWIthSignupRequestDto(signupRequestDto)
         .expectStatus()
         .isBadRequest();
 
@@ -92,10 +81,7 @@ public class AuthenticationIT {
 
     MemberSignupResponseDto signupResponseDto = MemberSignupResponseDto.builder()
         .email(signupRequestDto.getEmail()).name(signupRequestDto.getName()).build();
-    EntityExchangeResult<MemberSignupResponseDto> responseEntityExchangeResult = webTestClient.post()
-        .uri("/members")
-        .bodyValue(signupRequestDto)
-        .exchange()
+    EntityExchangeResult<MemberSignupResponseDto> responseEntityExchangeResult = postSignUpRequestWIthSignupRequestDto(signupRequestDto)
         .expectStatus()
         .isCreated().expectBody(MemberSignupResponseDto.class)
         .returnResult();
@@ -115,50 +101,35 @@ public class AuthenticationIT {
     //login - email malformed
     loginRequestDto.setEmail("test");
     loginRequestDto.setPassword("00000000");
-    webTestClient.post()
-        .uri("/auth/login")
-        .bodyValue(loginRequestDto)
-        .exchange()
+    postLoginRequestWithLoginRequestDto(loginRequestDto)
         .expectStatus()
         .isBadRequest();
 
     //login - password malformed
     loginRequestDto.setEmail("test@test.com");
     loginRequestDto.setPassword("00000000000000000000000000000000");
-    webTestClient.post()
-        .uri("/auth/login")
-        .bodyValue(loginRequestDto)
-        .exchange()
+    postLoginRequestWithLoginRequestDto(loginRequestDto)
         .expectStatus()
         .isBadRequest();
 
     //login - password wrong
     loginRequestDto.setEmail("test@test.com");
     loginRequestDto.setPassword("11111111");
-    webTestClient.post()
-        .uri("/auth/login")
-        .bodyValue(loginRequestDto)
-        .exchange()
+    postLoginRequestWithLoginRequestDto(loginRequestDto)
         .expectStatus()
         .isUnauthorized();
 
     //login - un saved member
     loginRequestDto.setEmail("test123@test.com");
     loginRequestDto.setPassword("00000000");
-    webTestClient.post()
-        .uri("/auth/login")
-        .bodyValue(loginRequestDto)
-        .exchange()
+    postLoginRequestWithLoginRequestDto(loginRequestDto)
         .expectStatus()
         .isUnauthorized();
 
     //login - ok
     loginRequestDto.setEmail("test@test.com");
     loginRequestDto.setPassword("00000000");
-    EntityExchangeResult<LoginResponseDto> loginResponseEntityExchangeResult = webTestClient.post()
-        .uri("/auth/login")
-        .bodyValue(loginRequestDto)
-        .exchange()
+    EntityExchangeResult<LoginResponseDto> loginResponseEntityExchangeResult = postLoginRequestWithLoginRequestDto(loginRequestDto)
         .expectStatus()
         .isOk()
         .expectBody(LoginResponseDto.class)
@@ -193,6 +164,20 @@ public class AuthenticationIT {
     assertThat(claimsFromRefreshToken.getIssuedAt()).isBefore(new Date());
     assertThat(claimsFromRefreshToken.get("roles")).isEqualTo(List.of("ROLE_USER"));
 
+  }
+
+  private WebTestClient.ResponseSpec postSignUpRequestWIthSignupRequestDto(MemberSignupRequestDto signupRequestDto) {
+    return webTestClient.post()
+        .uri("/members")
+        .bodyValue(signupRequestDto)
+        .exchange();
+  }
+
+  private WebTestClient.ResponseSpec postLoginRequestWithLoginRequestDto(LoginRequestDto loginRequestDto) {
+    return webTestClient.post()
+        .uri("/auth/login")
+        .bodyValue(loginRequestDto)
+        .exchange();
   }
 
 

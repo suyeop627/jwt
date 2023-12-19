@@ -16,4 +16,6 @@ public interface RefreshTokenService {
   void deleteRefreshTokenById(Long id);
 
   void deleteRefreshToken(String token);
+
+  void deleteRefreshTokenByMemberId(Long memberId);
 }

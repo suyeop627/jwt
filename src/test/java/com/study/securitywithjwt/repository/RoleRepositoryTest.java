@@ -1,24 +1,15 @@
 package com.study.securitywithjwt.repository;
 
-import com.study.securitywithjwt.domain.Member;
 import com.study.securitywithjwt.domain.Role;
-import com.study.securitywithjwt.utils.member.Gender;
 import com.study.securitywithjwt.utils.member.UserRole;
 import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 
-import java.time.LocalDateTime;
 import java.util.Optional;
-import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 //@ActiveProfiles("test")
 @DataJpaTest
@@ -30,16 +21,13 @@ class RoleRepositoryTest {
 
   @BeforeEach
   void setUp() {
+    //로드 시, role 3개 저장되도록 설정하여, 필요없어짐.
 //    roleRepository.save(new Role(1L, UserRole.ROLE_ADMIN));
 //    roleRepository.save(new Role(2L, UserRole.ROLE_MANAGER));
 //    roleRepository.save(new Role(3L, UserRole.ROLE_USER));
   }
-  @AfterEach
-  void tearDown(){
-    roleRepository.deleteAll();
-  }
   @Test
-  void findByName_returnOptionalRole() {
+  void findByName_existName_returnOptionalRole() {
     Optional<Role> optionalRole = roleRepository.findByName(UserRole.ROLE_USER);
     Assertions.assertThat(optionalRole.isPresent()).isTrue();
     Assertions.assertThat(optionalRole.get().getName()).isEqualTo(UserRole.ROLE_USER);

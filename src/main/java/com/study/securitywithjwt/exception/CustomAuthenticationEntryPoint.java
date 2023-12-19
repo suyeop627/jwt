@@ -11,7 +11,6 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.time.LocalDateTime;
 
@@ -60,14 +59,13 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
         .statusCode(HttpServletResponse.SC_UNAUTHORIZED)
         .build();
 
-    try (PrintWriter writer = response.getWriter()) { //try with resource - flush(), close()를 자동으로 호출해줌.
+    try (PrintWriter writer = response.getWriter()) {
       objectMapper.writeValue(writer, errorDto);
     }
   }
 
 
   private void setResponse(HttpServletRequest request, HttpServletResponse response, String exceptionMessage) throws IOException {
-    try (OutputStream outputStream = response.getOutputStream()) { //try with resource - close()를 자동으로 호출해줌.
       response.setContentType(MediaType.APPLICATION_JSON_VALUE);
       response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
       ErrorDto errorDto = ErrorDto.builder()
@@ -77,7 +75,8 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
           .statusCode(HttpServletResponse.SC_UNAUTHORIZED)
           .build();
 
-      new ObjectMapper().writeValue(outputStream,errorDto);
-    }
+      try (PrintWriter writer = response.getWriter()) {
+        objectMapper.writeValue(writer, errorDto);
+      }
   }
 }

@@ -3,17 +3,20 @@ package com.study.securitywithjwt.controller;
 import com.study.securitywithjwt.domain.RefreshToken;
 import com.study.securitywithjwt.dto.LoginRequestDto;
 import com.study.securitywithjwt.dto.LoginResponseDto;
+import com.study.securitywithjwt.dto.MemberInfo;
 import com.study.securitywithjwt.dto.RefreshTokenDto;
 import com.study.securitywithjwt.exception.ErrorDto;
 import com.study.securitywithjwt.exception.ResourceNotFoundException;
 import com.study.securitywithjwt.service.auth.AuthenticationService;
 import com.study.securitywithjwt.service.refreshtoken.RefreshTokenService;
 import com.study.securitywithjwt.utils.RequestValidationUtils;
+import com.study.securitywithjwt.utils.annotation.LoggedInUserInfo;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
@@ -64,10 +67,14 @@ public class AuthenticationController {
   }
 
   @DeleteMapping("/logout")
-  public ResponseEntity logout(@RequestBody RefreshTokenDto refreshTokenDto) {
-    log.info("logout called, token : {}", refreshTokenDto.getToken());
-    refreshTokenService.deleteRefreshToken(refreshTokenDto.getToken());
+  @Transactional
+  public ResponseEntity logout(@LoggedInUserInfo MemberInfo loggedInMember) {
+    if(loggedInMember==null){
+      log.info("logout called from not logged in user");
+      return ResponseEntity.badRequest().build();
+    }
+    log.info("logout called, memberId : {}", loggedInMember.getMemberId());
+    refreshTokenService.deleteRefreshTokenByMemberId(loggedInMember.getMemberId());
     return ResponseEntity.ok().build();
   }
-
 }
