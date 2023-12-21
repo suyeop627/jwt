@@ -43,9 +43,10 @@ public class Member {
   private Gender gender;
 
   @ManyToMany(fetch = FetchType.EAGER)//LazyInitializationException 방지
-  @JoinTable(name = "user_role",
-      joinColumns = @JoinColumn(name = "member_id"),
-      inverseJoinColumns = @JoinColumn(name = "role_id")
+  @JoinTable(name = "member_role",
+      joinColumns = @JoinColumn(name = "member_id"),//현재 엔티티의 외래키
+      inverseJoinColumns = @JoinColumn(name = "role_id")//join할 상대 엔티티의 외래키
+
   )
   @Builder.Default
   //@Builder를 class에 붙였을 때, build()과정에 포함되지 않은 필드들은 모두 null이나 0이 됨.

@@ -2,6 +2,7 @@ package com.study.securitywithjwt.service.refreshtoken.impl;
 
 import com.study.securitywithjwt.domain.RefreshToken;
 import com.study.securitywithjwt.repository.RefreshTokenRepository;
+import com.study.securitywithjwt.service.refreshtoken.impl.RefreshTokenServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

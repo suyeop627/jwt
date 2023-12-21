@@ -1,9 +1,10 @@
 package com.study.securitywithjwt.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.study.securitywithjwt.dto.ErrorDto;
 import com.study.securitywithjwt.dto.MemberSignupRequestDto;
 import com.study.securitywithjwt.dto.MemberSignupResponseDto;
-import com.study.securitywithjwt.exception.ErrorDto;
+import com.study.securitywithjwt.exception.CustomAuthenticationEntryPoint;
 import com.study.securitywithjwt.jwt.JwtAuthenticationProvider;
 import com.study.securitywithjwt.service.member.MemberService;
 import com.study.securitywithjwt.utils.member.Gender;
@@ -47,6 +48,9 @@ class MemberControllerTest {
   @MockBean
   PasswordEncoder passwordEncoder;
 
+  @MockBean
+  CustomAuthenticationEntryPoint authenticationEntryPoint;
+
   @Autowired
   MockMvc mockMvc;
 
@@ -65,7 +69,7 @@ class MemberControllerTest {
     MemberSignupResponseDto expectedMemberSignupResponseDto = MemberSignupResponseDto.builder()
         .memberId(1L)
         .email(memberSignupRequestDto.getEmail())
-        .regdate(LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS))//소수점 이하 자리수 문제 방지하기 위해서 자릿수 조절.
+        .regdate(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS))//소수점 이하 자리수 문제 방지하기 위해서 자릿수 조절.
         .name(memberSignupRequestDto.getName())
         .build();
     given(memberService.addMember(any())).willReturn(expectedMemberSignupResponseDto);

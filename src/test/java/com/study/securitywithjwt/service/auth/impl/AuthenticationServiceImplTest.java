@@ -5,12 +5,16 @@ import com.study.securitywithjwt.domain.RefreshToken;
 import com.study.securitywithjwt.domain.Role;
 import com.study.securitywithjwt.dto.LoginRequestDto;
 import com.study.securitywithjwt.dto.LoginResponseDto;
+import com.study.securitywithjwt.exception.JwtAuthenticationException;
+import com.study.securitywithjwt.exception.JwtExceptionType;
 import com.study.securitywithjwt.jwt.JwtUtils;
 import com.study.securitywithjwt.security.user.MemberUserDetails;
+import com.study.securitywithjwt.service.auth.impl.AuthenticationServiceImpl;
 import com.study.securitywithjwt.service.refreshtoken.RefreshTokenService;
 import com.study.securitywithjwt.utils.member.Gender;
 import com.study.securitywithjwt.utils.member.UserRole;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -27,6 +31,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
@@ -53,6 +58,7 @@ class AuthenticationServiceImplTest {
     Member member;
     LoginRequestDto requestDto;
     Authentication authentication;
+
     @BeforeEach
     void setUp() {
       requestDto = new LoginRequestDto("test@test.com", "passwordForTest");
@@ -69,7 +75,7 @@ class AuthenticationServiceImplTest {
 
       MemberUserDetails memberUserDetails = new MemberUserDetails(member);
 
-       authentication
+      authentication
           = new UsernamePasswordAuthenticationToken(memberUserDetails, null);
     }
 
@@ -161,5 +167,18 @@ class AuthenticationServiceImplTest {
         .hasFieldOrPropertyWithValue("email", claims.getSubject())
         .hasFieldOrPropertyWithValue("accessToken", "re_created_accessToken")
         .hasFieldOrPropertyWithValue("refreshToken", refreshToken);
+  }
+
+  @Test
+  void reIssueAccessToken_refreshTokenExpired_throwJwtExceptionWithHeader() {
+    //given
+    String expiredRefreshToken = "expired_refresh_token";
+    given(jwtUtils.getClaimsFromRefreshToken(anyString())).willThrow(ExpiredJwtException.class);
+
+    //when, then
+    assertThatThrownBy(() -> authenticationService.reIssueAccessToken(expiredRefreshToken))
+        .isInstanceOf(JwtAuthenticationException.class).hasMessage(JwtExceptionType.EXPIRED_REFRESH_TOKEN.getMessage());
+
+    then(refreshTokenService).should(times(1)).deleteRefreshToken(expiredRefreshToken);
   }
 }

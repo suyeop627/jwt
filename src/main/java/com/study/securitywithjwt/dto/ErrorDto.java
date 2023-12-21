@@ -1,4 +1,4 @@
-package com.study.securitywithjwt.exception;
+package com.study.securitywithjwt.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

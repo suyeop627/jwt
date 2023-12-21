@@ -11,6 +11,9 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.List;
 
+/**
+ * Cors 설정 및 argumentResolver를 추가하는 설정 클래스
+ */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
   private final LoggedInUserInfoArgumentResolver loggedInUserInfoArgumentResolver;
@@ -19,14 +22,11 @@ public class WebConfig implements WebMvcConfigurer {
     this.loggedInUserInfoArgumentResolver = loggedInUserInfoArgumentResolver;
   }
 
-
-  //cors 허용 설정
   @Bean
   public CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration corsConfiguration = new CorsConfiguration();
-    corsConfiguration.addAllowedOrigin("*");
-    corsConfiguration.addAllowedMethod("*");
-    corsConfiguration.setAllowedMethods(List.of("GET", "POST", "DELETE", "PATCH", "OPTION", "PUT"));
+    corsConfiguration.addAllowedOrigin("http://localhost:3000");
+    corsConfiguration.setAllowedMethods(List.of("GET", "POST", "DELETE", "PATCH", "PUT", "OPTION"));
     corsConfiguration.addAllowedHeader("Origin");
     corsConfiguration.addAllowedHeader("Content-Type");
     corsConfiguration.addAllowedHeader("Accept");
@@ -37,7 +37,6 @@ public class WebConfig implements WebMvcConfigurer {
 
     return urlBasedCorsConfigurationSource;
   }
-
 
   @Override
   public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {

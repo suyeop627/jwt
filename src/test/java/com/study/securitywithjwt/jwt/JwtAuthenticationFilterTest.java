@@ -1,6 +1,6 @@
 package com.study.securitywithjwt.jwt;
 
-import com.study.securitywithjwt.exception.JwtAuthenticationException;
+import com.study.securitywithjwt.exception.CustomAuthenticationEntryPoint;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -15,7 +15,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.IOException;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.*;
@@ -24,6 +23,8 @@ import static org.mockito.Mockito.*;
 class JwtAuthenticationFilterTest {
   @Mock
   private JwtAuthenticationProvider jwtAuthenticationProvider;
+  @Mock
+  private CustomAuthenticationEntryPoint authenticationEntryPoint;
   @InjectMocks
   private JwtAuthenticationFilter jwtAuthenticationFilter;
 
@@ -81,15 +82,17 @@ class JwtAuthenticationFilterTest {
   }
 
   @Test
-  void doFilterInternal_expiredToken_throwExpiredJwtException() {
+  void doFilterInternal_expiredToken_callAuthenticationEntryPoint() throws ServletException, IOException {
     // Given
     given(request.getRequestURI()).willReturn("/api");
     given(request.getHeader("Authorization")).willReturn("Bearer expired-token");
     given(jwtAuthenticationProvider.authenticate(any(JwtAuthenticationToken.class)))
-        .willThrow(new ExpiredJwtException(null, null, "token expired"));
-    // When/Then
-    assertThrows(JwtAuthenticationException.class, () ->
-            jwtAuthenticationFilter.doFilterInternal(request, response, filterChain));
+        .willThrow(new ExpiredJwtException(null, null,"throw expired jwt exception"));
+
+    // When
+    jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
+    // /Then
+    then(authenticationEntryPoint).should(times(1)).commence(any(), any(), any());
     then(filterChain).shouldHaveNoInteractions();
   }
 }

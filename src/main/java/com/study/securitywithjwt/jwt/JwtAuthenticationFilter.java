@@ -12,7 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -27,6 +27,13 @@ import java.io.IOException;
 @Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
   private final JwtAuthenticationProvider jwtAuthenticationProvider;
+
+  /*
+  * jwt 관련 예외가 발생하더라도 POST /error로 리다이렉트 함.
+  * /error에 리다이렉트 될 경우, header에 토큰을 포함하지 않으므로 항상 InsufficentAuthetnication 발생
+  * 예외 응답을 세분화 하기 위해, jwt 관련 에러 발생 시에는 entrypoint에서 commence를 직접 호출*/
+  private final AuthenticationEntryPoint authenticationEntryPoint;
+
   @Override
   protected void doFilterInternal(HttpServletRequest request,
                                   HttpServletResponse response,
@@ -45,6 +52,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     try {
       String token = getTokenFromRequest(request);
       if(token==null){
+        log.info("token null");
         filterChain.doFilter(request, response);
         return;
       }
@@ -61,36 +69,38 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       filterChain.doFilter(request, response);
 
     } catch (ExpiredJwtException e) {
-      request.setAttribute("exception", JwtExceptionType.EXPIRED_TOKEN.getCode());
-      log.error(JwtExceptionType.EXPIRED_TOKEN.getMessage());
-      throw new JwtAuthenticationException("throw expired token exception");
+      log.error(JwtExceptionType.EXPIRED_ACCESS_TOKEN.getMessage());
+      callAuthenticationEntryPoint(request, response, JwtExceptionType.EXPIRED_ACCESS_TOKEN);
 
     } catch (NullPointerException  | IllegalArgumentException e) {
       log.error(JwtExceptionType.TOKEN_NOT_FOUND.getMessage());
-      request.setAttribute("exception", JwtExceptionType.TOKEN_NOT_FOUND.getCode());
-      throw new JwtAuthenticationException("throw token not found exception");
+      callAuthenticationEntryPoint(request, response, JwtExceptionType.TOKEN_NOT_FOUND);
 
-    } catch (MalformedJwtException e){
+    } catch (MalformedJwtException e) {
       log.error(JwtExceptionType.INVALID_TOKEN.getMessage());
-      request.setAttribute("exception", JwtExceptionType.INVALID_TOKEN.getCode());
+      callAuthenticationEntryPoint(request, response, JwtExceptionType.INVALID_TOKEN);
 
-      throw new JwtAuthenticationException("throw malformed token exception");
 
     } catch (Exception e){
       log.error("error occurred in jwtAuthenticationFilter");
       log.error("exception message : {}", e.getMessage());
       e.printStackTrace();
+
       request.setAttribute("exception", JwtExceptionType.UNKNOWN_ERROR.getCode());
-      throw new JwtAuthenticationException("throw malformed token exception");
+      throw new JwtAuthenticationException("throw malformed token exception", JwtExceptionType.UNKNOWN_ERROR);
     }
 
   }
-
   private String getTokenFromRequest(HttpServletRequest request) {
     String authorizationHeader = request.getHeader("Authorization");
+    log.error(request.getHeader("Authorization"));
     if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
       return null;
     }
     return authorizationHeader.split(" ")[1];
+  }
+  private void callAuthenticationEntryPoint(HttpServletRequest request, HttpServletResponse response, JwtExceptionType jwtExceptionType) throws IOException, ServletException {
+    JwtAuthenticationException exception = new JwtAuthenticationException(jwtExceptionType);
+    authenticationEntryPoint.commence(request, response,exception);
   }
 }

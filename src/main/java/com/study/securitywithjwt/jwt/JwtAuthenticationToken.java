@@ -10,20 +10,19 @@ public class JwtAuthenticationToken extends AbstractAuthenticationToken {
   private final Object principal;
   private String token;
 //토큰만으로 인증 시도
-  public JwtAuthenticationToken(String token) {
+  public JwtAuthenticationToken(String unAuthenticatedToken) {
     super(null);
     this.principal = null;
-    this.token = token;
+    this.token = unAuthenticatedToken;
     setAuthenticated(false);
   }
 //토큰 + 사용자 정보 있음 ->
-  public JwtAuthenticationToken(Object principal, String token, Collection<? extends GrantedAuthority> authorities) {
+  public JwtAuthenticationToken(Object principal, String authenticatedToken, Collection<? extends GrantedAuthority> authorities) {
     super(authorities);
     this.principal = principal;
-    this.token = token;
+    this.token = authenticatedToken;
     super.setAuthenticated(true);
   }
-
   @Override
   public Object getCredentials() {
     return null;

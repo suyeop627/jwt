@@ -2,11 +2,10 @@ package com.study.securitywithjwt.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.study.securitywithjwt.domain.RefreshToken;
-import com.study.securitywithjwt.dto.LoginRequestDto;
-import com.study.securitywithjwt.dto.LoginResponseDto;
-import com.study.securitywithjwt.dto.MemberInfo;
-import com.study.securitywithjwt.dto.RefreshTokenDto;
-import com.study.securitywithjwt.exception.ErrorDto;
+import com.study.securitywithjwt.dto.*;
+import com.study.securitywithjwt.exception.CustomAuthenticationEntryPoint;
+import com.study.securitywithjwt.exception.JwtAuthenticationException;
+import com.study.securitywithjwt.exception.JwtExceptionType;
 import com.study.securitywithjwt.jwt.JwtAuthenticationProvider;
 import com.study.securitywithjwt.service.auth.AuthenticationService;
 import com.study.securitywithjwt.service.refreshtoken.RefreshTokenService;
@@ -32,7 +31,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.times;
@@ -54,6 +54,8 @@ public class AuthenticationControllerTest {
   private RefreshTokenService refreshTokenService;
   @Autowired
   private ObjectMapper objectMapper;
+  @MockBean
+  CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
   @MockBean
   private LoggedInUserInfoArgumentResolver argumentResolver;
@@ -164,86 +166,122 @@ public class AuthenticationControllerTest {
   }
 
 
-  @Test
-  void reIssueAccessToken_nonexistentToken_return404ErrorDto() throws Exception {
-    //given
-    RefreshTokenDto refreshTokenDto = new RefreshTokenDto();
-    refreshTokenDto.setToken("refreshToken_for_test");
+  @Nested
+  class reIssueAccessToken {
+    @Test
+    void reIssueAccessToken_validState_returnLoginResponseDto() throws Exception {
+      //given
+      RefreshTokenDto refreshTokenDto = new RefreshTokenDto();
+      refreshTokenDto.setToken("refreshToken_for_test");
+      LoginResponseDto loginResponseDto = new LoginResponseDto("accessToken", "refreshToken", "test@test.com", "testName");
+      RefreshToken refreshToken = new RefreshToken();
+      refreshToken.setToken("token");
+      given(authenticationService.selectRefreshToken(anyString())).willReturn(Optional.of(refreshToken));
+      given(authenticationService.reIssueAccessToken(anyString())).willReturn(loginResponseDto);
 
-    given(authenticationService.selectRefreshToken(anyString())).willReturn(Optional.empty());
+      //when
+      ResultActions response = mockMvc.perform(post("/auth/refresh")
+          .contentType(MediaType.APPLICATION_JSON)
+          .content(objectMapper.writeValueAsString(refreshTokenDto)));
 
-    ErrorDto errorDto = new ErrorDto("/auth/refresh", "token doesn't exist in database", HttpStatus.NOT_FOUND.value(), LocalDateTime.now());
-    //when
-    ResultActions response = mockMvc.perform(post("/auth/refresh")
-        .contentType(MediaType.APPLICATION_JSON)
-        .content(objectMapper.writeValueAsString(refreshTokenDto)));
+      //then
+      response.andExpect(MockMvcResultMatchers.status().isOk())
+          .andExpect(MockMvcResultMatchers.jsonPath("$.accessToken", Matchers.is(loginResponseDto.getAccessToken())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$.refreshToken", Matchers.is(loginResponseDto.getRefreshToken())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$.email", Matchers.is(loginResponseDto.getEmail())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$.name", Matchers.is(loginResponseDto.getName())))
+          .andDo(MockMvcResultHandlers.print());
 
-    //then
-    response.andExpect(MockMvcResultMatchers.status().isNotFound())
-        .andExpect(MockMvcResultMatchers.jsonPath("$.path", Matchers.is(errorDto.getPath())))
-        .andExpect(MockMvcResultMatchers.jsonPath("$.message", Matchers.is(errorDto.getMessage())))
-        .andExpect(MockMvcResultMatchers.jsonPath("$.statusCode", Matchers.is(errorDto.getStatusCode())))
-        .andDo(MockMvcResultHandlers.print());
+      then(authenticationService).should(times(1)).reIssueAccessToken(anyString());
+    }
 
-    then(authenticationService).should(times(0)).reIssueAccessToken(anyString());
+    @Test
+    void reIssueAccessToken_nonexistentToken_return404ErrorDto() throws Exception {
+      //given
+      RefreshTokenDto refreshTokenDto = new RefreshTokenDto();
+      refreshTokenDto.setToken("refreshToken_for_test");
+
+      given(authenticationService.selectRefreshToken(anyString())).willReturn(Optional.empty());
+
+      ErrorDto errorDto = new ErrorDto("/auth/refresh", "token doesn't exist in database", HttpStatus.NOT_FOUND.value(), LocalDateTime.now());
+      //when
+      ResultActions response = mockMvc.perform(post("/auth/refresh")
+          .contentType(MediaType.APPLICATION_JSON)
+          .content(objectMapper.writeValueAsString(refreshTokenDto)));
+
+      //then
+      response.andExpect(MockMvcResultMatchers.status().isNotFound())
+          .andExpect(MockMvcResultMatchers.jsonPath("$.path", Matchers.is(errorDto.getPath())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$.message", Matchers.is(errorDto.getMessage())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$.statusCode", Matchers.is(errorDto.getStatusCode())))
+          .andDo(MockMvcResultHandlers.print());
+
+      then(authenticationService).should(times(0)).reIssueAccessToken(anyString());
+    }
+
+    @Test
+    void reIssueAccessToken_refreshTokenExpired_throwJwtAuthenticationException() throws Exception {
+      //given
+      RefreshTokenDto refreshTokenDto = new RefreshTokenDto();
+      refreshTokenDto.setToken("expired_refresh_token");
+      given(authenticationService.selectRefreshToken(anyString()))
+          .willReturn(Optional.of(new RefreshToken()));
+
+      given(authenticationService.reIssueAccessToken(any()))
+          .willThrow(new JwtAuthenticationException(JwtExceptionType.EXPIRED_REFRESH_TOKEN.getMessage(),
+              JwtExceptionType.EXPIRED_REFRESH_TOKEN));
+
+      ErrorDto errorDto = new ErrorDto("/auth/refresh", JwtExceptionType.EXPIRED_REFRESH_TOKEN.getMessage(), HttpStatus.UNAUTHORIZED.value(), LocalDateTime.now());
+      //when
+      ResultActions response = mockMvc.perform(post("/auth/refresh")
+          .contentType(MediaType.APPLICATION_JSON)
+          .content(objectMapper.writeValueAsString(refreshTokenDto)));
+
+      //then
+      response.andExpect(MockMvcResultMatchers.status().isUnauthorized())
+          .andExpect(MockMvcResultMatchers.jsonPath("$.path", Matchers.is(errorDto.getPath())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$.message", Matchers.is(errorDto.getMessage())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$.statusCode", Matchers.is(errorDto.getStatusCode())))
+          .andExpect(MockMvcResultMatchers.header().exists("JwtException"))
+          .andExpect(MockMvcResultMatchers.header().string("JwtException", JwtExceptionType.EXPIRED_REFRESH_TOKEN.getCode()))
+          .andDo(MockMvcResultHandlers.print());
+
+    }
+
   }
 
+  @Nested
+  class logout {
+    @Test
+    void logout_validState_deleteTokenInDB() throws Exception {
+      //given
+      MemberInfo loggedInMember = new MemberInfo();
+      loggedInMember.setMemberId(1L);
+      given(argumentResolver.supportsParameter(any())).willReturn(true);
+      given(argumentResolver.resolveArgument(any(), any(), any(), any())).willReturn(loggedInMember);
 
-  @Test
-  void reIssueAccessToken_validState_returnLoginResponseDto() throws Exception {
-    //given
-    RefreshTokenDto refreshTokenDto = new RefreshTokenDto();
-    refreshTokenDto.setToken("refreshToken_for_test");
-    LoginResponseDto loginResponseDto = new LoginResponseDto("accessToken", "refreshToken", "test@test.com", "testName");
-    RefreshToken refreshToken = new RefreshToken();
-    refreshToken.setToken("token");
-    given(authenticationService.selectRefreshToken(anyString())).willReturn(Optional.of(refreshToken));
-    given(authenticationService.reIssueAccessToken(anyString())).willReturn(loginResponseDto);
+      //when
+      ResultActions response = mockMvc.perform(delete("/auth/logout")
+          .header("authorization", "token"));
+      //then
+      response.andExpect(MockMvcResultMatchers.status().isOk())
+          .andDo(MockMvcResultHandlers.print());
+      then(refreshTokenService).should(times(1)).deleteRefreshTokenByMemberId(loggedInMember.getMemberId());
+    }
 
-    //when
-    ResultActions response = mockMvc.perform(post("/auth/refresh")
-        .contentType(MediaType.APPLICATION_JSON)
-        .content(objectMapper.writeValueAsString(refreshTokenDto)));
+    @Test
+    void logout_noToken_throwBadRequestException() throws Exception {
+      //given
+      given(argumentResolver.supportsParameter(any())).willReturn(true);
+      given(argumentResolver.resolveArgument(any(), any(), any(), any())).willReturn(null);
 
-    //then
-    response.andExpect(MockMvcResultMatchers.status().isOk())
-        .andExpect(MockMvcResultMatchers.jsonPath("$.accessToken", Matchers.is(loginResponseDto.getAccessToken())))
-        .andExpect(MockMvcResultMatchers.jsonPath("$.refreshToken", Matchers.is(loginResponseDto.getRefreshToken())))
-        .andExpect(MockMvcResultMatchers.jsonPath("$.email", Matchers.is(loginResponseDto.getEmail())))
-        .andExpect(MockMvcResultMatchers.jsonPath("$.name", Matchers.is(loginResponseDto.getName())))
-        .andDo(MockMvcResultHandlers.print());
-
-    then(authenticationService).should(times(1)).reIssueAccessToken(anyString());
+      //when
+      ResultActions response = mockMvc.perform(delete("/auth/logout"));
+      //then
+      response.andExpect(MockMvcResultMatchers.status().isBadRequest())
+          .andDo(MockMvcResultHandlers.print());
+      then(refreshTokenService).shouldHaveNoInteractions();
+    }
   }
 
-  @Test
-  void logout_validState_deleteTokenInDB() throws Exception {
-    //given
-    MemberInfo loggedInMember = new MemberInfo();
-    loggedInMember.setMemberId(1L);
-    given(argumentResolver.supportsParameter(any())).willReturn(true);
-    given(argumentResolver.resolveArgument(any(), any(), any(), any())).willReturn(loggedInMember);
-
-    //when
-    ResultActions response = mockMvc.perform(delete("/auth/logout")
-        .header("authorization", "token"));
-    //then
-    response.andExpect(MockMvcResultMatchers.status().isOk())
-        .andDo(MockMvcResultHandlers.print());
-    then(refreshTokenService).should(times(1)).deleteRefreshTokenByMemberId(loggedInMember.getMemberId());
-  }
-
-  @Test
-  void logout_noToken_throwBadRequestException() throws Exception {
-    //given
-    given(argumentResolver.supportsParameter(any())).willReturn(true);
-    given(argumentResolver.resolveArgument(any(), any(), any(), any())).willReturn(null);
-
-    //when
-    ResultActions response = mockMvc.perform(delete("/auth/logout"));
-    //then
-    response.andExpect(MockMvcResultMatchers.status().isBadRequest())
-        .andDo(MockMvcResultHandlers.print());
-    then(refreshTokenService).shouldHaveNoInteractions();
-  }
 }

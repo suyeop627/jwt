@@ -5,9 +5,11 @@ import lombok.Getter;
 public enum JwtExceptionType {
   TOKEN_NOT_FOUND("NOT_FOUND_TOKEN", "can not found token in header"),
   INVALID_TOKEN("INVALID_TOKEN", "token is invalid"),
-  EXPIRED_TOKEN("EXPIRED_TOKEN", "token is expired"),
+  EXPIRED_ACCESS_TOKEN("EXPIRED_ACCESS_TOKEN", "access token is expired"),
 
-  UNKNOWN_ERROR("UNKNOWN_ERROR", "unknown error occurred");
+  EXPIRED_REFRESH_TOKEN("EXPIRED_REFRESH_TOKEN", "refresh token expired, reauthenticate needed"),
+  UNKNOWN_ERROR("UNKNOWN_ERROR", "error regarding JWT occurred");
+
 
   @Getter
   private final String code;

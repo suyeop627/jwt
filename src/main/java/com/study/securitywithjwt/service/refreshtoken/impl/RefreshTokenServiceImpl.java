@@ -46,6 +46,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
         log.info("logout complete, member id : {}", optionalToken.get().getMemberId());
       }
     }catch (Exception e){
+      log.error("deleteRefreshToken(token), token to delete is nonexistent. token : {}", token);
       e.printStackTrace();
     }
   }

@@ -1,6 +1,6 @@
 package com.study.securitywithjwt.utils;
 
-import com.study.securitywithjwt.exception.ErrorDto;
+import com.study.securitywithjwt.dto.ErrorDto;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

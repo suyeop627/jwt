@@ -13,5 +13,4 @@ public class MemberInfoDto {
   private Long memberId;
   private String email;
   private String name;
-
 }

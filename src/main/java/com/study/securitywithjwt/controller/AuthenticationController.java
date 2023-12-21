@@ -5,7 +5,7 @@ import com.study.securitywithjwt.dto.LoginRequestDto;
 import com.study.securitywithjwt.dto.LoginResponseDto;
 import com.study.securitywithjwt.dto.MemberInfo;
 import com.study.securitywithjwt.dto.RefreshTokenDto;
-import com.study.securitywithjwt.exception.ErrorDto;
+import com.study.securitywithjwt.dto.ErrorDto;
 import com.study.securitywithjwt.exception.ResourceNotFoundException;
 import com.study.securitywithjwt.service.auth.AuthenticationService;
 import com.study.securitywithjwt.service.refreshtoken.RefreshTokenService;
@@ -22,7 +22,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Set;
 
-
+/**
+ * 사용자 인증 클래스
+ */
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
@@ -32,6 +34,13 @@ public class AuthenticationController {
   private final AuthenticationService authenticationService;
   private final RefreshTokenService refreshTokenService;
 
+  /**
+   * @param loginRequestDto 로그인 할 사용자의 정보(email, password)
+   * @param bindingResult   데이터 바인딩 과정에서 발생한 에러
+   * @param request         http servlet request
+   * @return 로그인 성공시 accessToken, refreshToken, email, name을 담은 LoginResponseDto 반환<br>
+   * 로그인 실패시 path, message, code, localDateTime을 담은 errorDto 반환
+   */
   @PostMapping("login")
   public ResponseEntity<?> login(@RequestBody @Valid LoginRequestDto loginRequestDto, BindingResult bindingResult, HttpServletRequest request) {
     ResponseEntity<Set<ErrorDto>> errorDtoSet = RequestValidationUtils.getErrorResponseFromBindingResult(bindingResult, request);
@@ -45,7 +54,7 @@ public class AuthenticationController {
   }
 
   @PostMapping("/refresh")
-  public ResponseEntity<LoginResponseDto> reIssueAccessToken(@RequestBody RefreshTokenDto refreshTokenDto) {
+  public ResponseEntity<?> reIssueAccessToken(@RequestBody RefreshTokenDto refreshTokenDto) {
 
     log.info("Attempting renew access token with refresh token {}", refreshTokenDto.getToken());
 
@@ -55,13 +64,10 @@ public class AuthenticationController {
     RefreshToken refreshToken = authenticationService.selectRefreshToken(refreshTokenDto.getToken())
         .orElseThrow(() -> new ResourceNotFoundException("token doesn't exist in database"));
 
-      //acees token 재발급
-      response = authenticationService.reIssueAccessToken(refreshToken.getToken());
+    //acees token 재발급
+    response = authenticationService.reIssueAccessToken(refreshToken.getToken());
 
-      log.info("===refresh token changed===");
-
-      log.info("before : {}", refreshTokenDto.getToken());
-      log.info("after : {}", response.getRefreshToken());
+    log.info("member : {} , access token changed", response.getEmail());
 
     return ResponseEntity.ok().body(response);
   }
@@ -69,7 +75,7 @@ public class AuthenticationController {
   @DeleteMapping("/logout")
   @Transactional
   public ResponseEntity logout(@LoggedInUserInfo MemberInfo loggedInMember) {
-    if(loggedInMember==null){
+    if (loggedInMember == null) {
       log.info("logout called from not logged in user");
       return ResponseEntity.badRequest().build();
     }

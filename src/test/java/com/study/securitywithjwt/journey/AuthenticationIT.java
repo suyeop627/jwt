@@ -1,17 +1,21 @@
 package com.study.securitywithjwt.journey;
 
-import com.study.securitywithjwt.dto.LoginRequestDto;
-import com.study.securitywithjwt.dto.LoginResponseDto;
-import com.study.securitywithjwt.dto.MemberSignupRequestDto;
-import com.study.securitywithjwt.dto.MemberSignupResponseDto;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.study.securitywithjwt.dto.*;
+import com.study.securitywithjwt.exception.JwtExceptionType;
 import com.study.securitywithjwt.jwt.JwtUtils;
+import com.study.securitywithjwt.repository.MemberRepository;
+import com.study.securitywithjwt.repository.RefreshTokenRepository;
 import com.study.securitywithjwt.utils.member.Gender;
 import io.jsonwebtoken.Claims;
-import org.junit.jupiter.api.Test;
+import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
@@ -24,16 +28,27 @@ import static org.springframework.boot.test.context.SpringBootTest.WebEnvironmen
 @SpringBootTest(webEnvironment = RANDOM_PORT)
 @TestPropertySource(locations = "classpath:/application-test.properties")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@Slf4j
 public class AuthenticationIT {
-
+  @Autowired
+  ObjectMapper objectMapper;
   @Autowired
   private JwtUtils jwtUtils;
 
   @Autowired
   private WebTestClient webTestClient;
 
+  @Autowired
+  RefreshTokenRepository refreshTokenRepository;
+  @Autowired
+  MemberRepository memberRepository;
+  @AfterEach
+  void tearDown() {
+    memberRepository.deleteAll();
+    refreshTokenRepository.deleteAll();
+  }
   @Test
-  void loginAndSignupIT(){
+  void loginAndSignupIT() {
     String email = "test123@test.com";
     String password = "00000000"; //password size is too short
     LoginRequestDto loginRequestDto = new LoginRequestDto(email, password);
@@ -151,7 +166,6 @@ public class AuthenticationIT {
     assertThat(claimsFromAccessToken.get("roles")).isEqualTo(List.of("ROLE_USER"));
 
 
-
     Claims claimsFromRefreshToken = jwtUtils.getClaimsFromRefreshToken(refreshToken);
     assertThat(claimsFromRefreshToken.getSubject()).isEqualTo(loginRequestDto.getEmail());
     assertThat(claimsFromRefreshToken.get("name")).isEqualTo(signupRequestDto.getName());
@@ -180,5 +194,205 @@ public class AuthenticationIT {
         .exchange();
   }
 
+  @Nested
+  class JwtReIssue {
+    MemberSignupRequestDto signupRequestDto;
 
+    @BeforeEach
+    void setUP() {
+      signupRequestDto = new MemberSignupRequestDto();
+      signupRequestDto.setEmail("testEmail@email.com");
+      signupRequestDto.setPassword("00000000");
+      signupRequestDto.setName("testName");
+      signupRequestDto.setGender(Gender.MALE);
+
+
+      webTestClient.post().uri("/members")
+          .contentType(MediaType.APPLICATION_JSON)
+          .bodyValue(signupRequestDto)
+          .exchange()
+          .expectStatus().isCreated();
+    }
+
+
+
+    @Test
+    void reIssueAccessToken() {
+      ReflectionTestUtils.setField(jwtUtils, "ACCESS_TOKEN_DURATION", -1000L);
+      //issue access token(expired) & refresh token
+
+      LoginRequestDto loginRequestDto = new LoginRequestDto(signupRequestDto.getEmail(), signupRequestDto.getPassword());
+
+      EntityExchangeResult<LoginResponseDto> loginResponseDtoEntityExchangeResult =
+          webTestClient.post()
+              .uri("/auth/login")
+              .contentType(MediaType.APPLICATION_JSON)
+              .bodyValue(loginRequestDto)
+              .exchange()
+              .expectStatus().isOk()
+              .expectBody(LoginResponseDto.class)
+              .returnResult();
+
+      assertThat(loginResponseDtoEntityExchangeResult.getResponseBody()).isNotNull();
+      String accessTokenExpired = loginResponseDtoEntityExchangeResult.getResponseBody().getAccessToken();
+      String refreshToken = loginResponseDtoEntityExchangeResult.getResponseBody().getRefreshToken();
+
+      log.info("reissued accessToken (expired) : {}", accessTokenExpired);
+      log.info("reissued refreshToken (expired) : {}", refreshToken);
+      log.info("request post \"/api\"");
+      log.info("refreshTokenRepository count {} after request /login ", refreshTokenRepository.count());
+
+      //when request for api ->then  throw expired token exception
+      EntityExchangeResult<ErrorDto> entityExchangeResult = webTestClient.post()
+          .uri("/api")
+          .header("Authorization", String.format("Bearer %s", accessTokenExpired))
+          .exchange()
+          .expectStatus()
+          .isUnauthorized()
+          .expectHeader()
+          .valueEquals("JwtException", JwtExceptionType.EXPIRED_ACCESS_TOKEN.getCode())
+          .expectBody(ErrorDto.class)
+          .returnResult();
+
+      assertThat(entityExchangeResult.getResponseBody()).isNotNull()
+          .extracting(ErrorDto::getMessage).isEqualTo(JwtExceptionType.EXPIRED_ACCESS_TOKEN.getMessage());
+
+      RefreshTokenDto refreshTokenDto = new RefreshTokenDto();
+      refreshTokenDto.setToken(refreshToken);
+
+      ReflectionTestUtils.setField(jwtUtils, "ACCESS_TOKEN_DURATION", 60 * 60 * 1000L);
+
+
+      //request with body contains refresh token ->   reIssue access token
+      EntityExchangeResult<LoginResponseDto> loginResponseDtoEntityExchangeResultAfterRefresh =
+          webTestClient.post().uri("/auth/refresh")
+              .contentType(MediaType.APPLICATION_JSON)
+              .bodyValue(refreshTokenDto)
+              .exchange()
+              .expectStatus()
+              .isOk()
+              .expectBody(LoginResponseDto.class)
+              .returnResult();
+      assertThat(loginResponseDtoEntityExchangeResultAfterRefresh.getResponseBody()).isNotNull();
+      assertThat(loginResponseDtoEntityExchangeResultAfterRefresh.getResponseBody().getAccessToken()).isNotEqualTo(accessTokenExpired);
+      assertThat(loginResponseDtoEntityExchangeResultAfterRefresh.getResponseBody().getRefreshToken()).isEqualTo(refreshToken);
+
+
+
+      log.info("refreshTokenRepository count {} after request /refresh ", refreshTokenRepository.count());
+      assertThat(refreshTokenRepository.count() == 1).isTrue();
+
+      //request for api with access token -> ok
+
+      String reIssuedAccessTokenWithBearer = String.format("Bearer %s", loginResponseDtoEntityExchangeResultAfterRefresh.getResponseBody().getAccessToken());
+      System.out.println("reIssuedAccessTokenWithBearer = " + reIssuedAccessTokenWithBearer);
+
+      webTestClient.post().uri("/api")
+          .header("Authorization", reIssuedAccessTokenWithBearer)
+          .exchange()
+          .expectStatus()
+          .isOk();
+      webTestClient.delete().uri("/auth/logout")
+          .header("Authorization", reIssuedAccessTokenWithBearer)
+          .exchange()
+          .expectStatus()
+          .isOk();
+
+      assertThat(refreshTokenRepository.count() == 0).isTrue();
+      log.info("refreshTokenRepository count {} after request /logout ", refreshTokenRepository.count());
+    }
+
+    @Test
+    void reIssueRefreshToken() {
+      ReflectionTestUtils.setField(jwtUtils, "ACCESS_TOKEN_DURATION", -1000L);
+      ReflectionTestUtils.setField(jwtUtils, "REFRESH_TOKEN_DURATION", -1000L);
+      //login -> issue access token(expired) & refresh token(expired)
+      LoginRequestDto loginRequestDto = new LoginRequestDto(signupRequestDto.getEmail(), signupRequestDto.getPassword());
+
+      EntityExchangeResult<LoginResponseDto> loginResponseDtoEntityExchangeResult =
+          webTestClient.post().uri("/auth/login")
+              .contentType(MediaType.APPLICATION_JSON)
+              .bodyValue(loginRequestDto)
+              .exchange()
+              .expectStatus().isOk()
+              .expectBody(LoginResponseDto.class)
+              .returnResult();
+
+      assertThat(loginResponseDtoEntityExchangeResult.getResponseBody()).isNotNull();
+      assertThat(refreshTokenRepository.count() == 1).isTrue();
+      String accessTokenExpired = loginResponseDtoEntityExchangeResult.getResponseBody().getAccessToken();
+      String refreshTokenExpired = loginResponseDtoEntityExchangeResult.getResponseBody().getRefreshToken();
+
+
+      //when request for api -> throw expired token exception
+      webTestClient.post()
+          .uri("/api")
+          .header("Authorization", "Bearer " + accessTokenExpired)
+          .exchange()
+          .expectStatus()
+          .isUnauthorized()
+          .expectHeader()
+          .valueEquals("jwtException", JwtExceptionType.EXPIRED_ACCESS_TOKEN.getCode())
+          .expectBody(ErrorDto.class);
+
+
+      //request with refresh token in body -> logout ->  throw expired token exception
+      RefreshTokenDto expiredRefreshTokenDto = new RefreshTokenDto();
+      expiredRefreshTokenDto.setToken(refreshTokenExpired);
+      EntityExchangeResult<ErrorDto> entityExchangeResultWhenRefreshTokenExpired = webTestClient.post()
+          .uri("/auth/refresh")
+          .contentType(MediaType.APPLICATION_JSON)
+          .bodyValue(expiredRefreshTokenDto)
+          .exchange()
+          .expectStatus()
+          .isUnauthorized()
+          .expectHeader()
+          .valueEquals("JwtException", JwtExceptionType.EXPIRED_REFRESH_TOKEN.getCode())
+          .expectBody(ErrorDto.class)
+          .returnResult();
+
+
+      System.out.println("entityExchangeResult1.getResponseBody() = " + entityExchangeResultWhenRefreshTokenExpired.getResponseBody());
+
+      assertThat(refreshTokenRepository.count() == 0).isTrue();
+      assertThat(entityExchangeResultWhenRefreshTokenExpired.getResponseBody()).isNotNull();
+      assertThat(entityExchangeResultWhenRefreshTokenExpired.getResponseBody().getMessage()).isEqualTo(JwtExceptionType.EXPIRED_REFRESH_TOKEN.getMessage());
+
+
+      //login ->issue access token & refresh token valid
+
+      ReflectionTestUtils.setField(jwtUtils, "ACCESS_TOKEN_DURATION", 60 * 60 * 1000L);
+      ReflectionTestUtils.setField(jwtUtils, "REFRESH_TOKEN_DURATION", 60 * 60 * 1000L);
+
+      EntityExchangeResult<LoginResponseDto> loginResponseDtoEntityExchangeResultWithValidTokens = webTestClient.post()
+          .uri("/auth/login")
+          .contentType(MediaType.APPLICATION_JSON)
+          .bodyValue(loginRequestDto)
+          .exchange().expectStatus()
+          .isOk()
+          .expectBody(LoginResponseDto.class).returnResult();
+
+      assertThat(loginResponseDtoEntityExchangeResultWithValidTokens.getResponseBody()).isNotNull();
+      String validAccessToken = loginResponseDtoEntityExchangeResultWithValidTokens.getResponseBody().getAccessToken();
+      String validRefreshToken = loginResponseDtoEntityExchangeResultWithValidTokens.getResponseBody().getRefreshToken();
+
+
+      //request for api with access token -> ok
+
+      webTestClient.post()
+          .uri("/api")
+          .header("Authorization", String.format("Bearer %s", validAccessToken))
+          .exchange()
+          .expectStatus().isOk();
+
+      assertThat(loginResponseDtoEntityExchangeResultWithValidTokens.getResponseBody()).isNotNull();
+
+      webTestClient.delete().uri("/auth/logout")
+          .header("Authorization", String.format("Bearer %s", validAccessToken))
+          .exchange()
+          .expectStatus()
+          .isOk();
+      assertThat(refreshTokenRepository.count() == 0).isTrue();
+    }
+  }
 }
