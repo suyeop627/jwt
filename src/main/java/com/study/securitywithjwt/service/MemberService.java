@@ -1,4 +1,4 @@
-package com.study.securitywithjwt.service.member.impl;
+package com.study.securitywithjwt.service;
 
 import com.study.securitywithjwt.domain.Member;
 import com.study.securitywithjwt.domain.Role;
@@ -9,7 +9,6 @@ import com.study.securitywithjwt.exception.ResourceDuplicatedException;
 import com.study.securitywithjwt.exception.ResourceNotFoundException;
 import com.study.securitywithjwt.repository.MemberRepository;
 import com.study.securitywithjwt.repository.RoleRepository;
-import com.study.securitywithjwt.service.member.MemberService;
 import com.study.securitywithjwt.utils.member.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,12 +18,12 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
-public class MemberServiceImpl implements MemberService {
+public class MemberService {
   private final PasswordEncoder passwordEncoder;
   private final MemberRepository memberRepository;
   private final RoleRepository roleRepository;
 
-  @Override
+
   public MemberSignupResponseDto addMember(MemberSignupRequestDto requestDto) {
     String userEmail = requestDto.getEmail();
     //email 중복 확인
@@ -54,7 +53,7 @@ public class MemberServiceImpl implements MemberService {
         .build();
   }
 
-  @Override
+
   public MemberDto getMember(Integer memberId) {
     Optional<Member> optionalMember = memberRepository.findById(Long.valueOf(memberId));
 

@@ -1,8 +1,7 @@
-package com.study.securitywithjwt.service.refreshtoken.impl;
+package com.study.securitywithjwt.service;
 
 import com.study.securitywithjwt.domain.RefreshToken;
 import com.study.securitywithjwt.repository.RefreshTokenRepository;
-import com.study.securitywithjwt.service.refreshtoken.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -13,30 +12,30 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class RefreshTokenServiceImpl implements RefreshTokenService {
+public class RefreshTokenService {
   private final RefreshTokenRepository refreshTokenRepository;
 
-  @Override
+
   public RefreshToken insertRefreshToken(RefreshToken refreshToken) {
     return refreshTokenRepository.save(refreshToken);
   }
 
-  @Override
+
   public Optional<RefreshToken> selectRefreshTokenByTokenValue(String refreshToken) {
     return refreshTokenRepository.findByToken(refreshToken);
   }
 
-  @Override
+
   public Optional<RefreshToken> selectRefreshTokenByMemberEmail(String email) {
     return refreshTokenRepository.findRefreshTokenByMemberEmail(email);
   }
 
-  @Override
+
   public void deleteRefreshTokenById(Long id) {
     refreshTokenRepository.deleteById(id);
   }
 
-  @Override
+
   public void deleteRefreshToken(String token) {
 
     Optional<RefreshToken> optionalToken = refreshTokenRepository.findByToken(token);
@@ -51,7 +50,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     }
   }
 
-  @Override
+
   public void deleteRefreshTokenByMemberId(Long memberId) {
     refreshTokenRepository.deleteByMemberId(memberId);
   }

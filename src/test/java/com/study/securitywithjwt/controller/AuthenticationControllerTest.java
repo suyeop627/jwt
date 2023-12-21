@@ -7,8 +7,8 @@ import com.study.securitywithjwt.exception.CustomAuthenticationEntryPoint;
 import com.study.securitywithjwt.exception.JwtAuthenticationException;
 import com.study.securitywithjwt.exception.JwtExceptionType;
 import com.study.securitywithjwt.jwt.JwtAuthenticationProvider;
-import com.study.securitywithjwt.service.auth.AuthenticationService;
-import com.study.securitywithjwt.service.refreshtoken.RefreshTokenService;
+import com.study.securitywithjwt.service.AuthenticationService;
+import com.study.securitywithjwt.service.RefreshTokenService;
 import com.study.securitywithjwt.utils.annotation.LoggedInUserInfoArgumentResolver;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Nested;
@@ -176,8 +176,8 @@ public class AuthenticationControllerTest {
       LoginResponseDto loginResponseDto = new LoginResponseDto("accessToken", "refreshToken", "test@test.com", "testName");
       RefreshToken refreshToken = new RefreshToken();
       refreshToken.setToken("token");
-      given(authenticationService.selectRefreshToken(anyString())).willReturn(Optional.of(refreshToken));
-      given(authenticationService.reIssueAccessToken(anyString())).willReturn(loginResponseDto);
+      given(refreshTokenService.selectRefreshTokenByTokenValue(anyString())).willReturn(Optional.of(refreshToken));
+      given(authenticationService.authenticateWithRefreshToken(anyString())).willReturn(loginResponseDto);
 
       //when
       ResultActions response = mockMvc.perform(post("/auth/refresh")
@@ -192,7 +192,7 @@ public class AuthenticationControllerTest {
           .andExpect(MockMvcResultMatchers.jsonPath("$.name", Matchers.is(loginResponseDto.getName())))
           .andDo(MockMvcResultHandlers.print());
 
-      then(authenticationService).should(times(1)).reIssueAccessToken(anyString());
+      then(authenticationService).should(times(1)).authenticateWithRefreshToken(anyString());
     }
 
     @Test
@@ -201,7 +201,7 @@ public class AuthenticationControllerTest {
       RefreshTokenDto refreshTokenDto = new RefreshTokenDto();
       refreshTokenDto.setToken("refreshToken_for_test");
 
-      given(authenticationService.selectRefreshToken(anyString())).willReturn(Optional.empty());
+      given(refreshTokenService.selectRefreshTokenByTokenValue(anyString())).willReturn(Optional.empty());
 
       ErrorDto errorDto = new ErrorDto("/auth/refresh", "token doesn't exist in database", HttpStatus.NOT_FOUND.value(), LocalDateTime.now());
       //when
@@ -216,7 +216,7 @@ public class AuthenticationControllerTest {
           .andExpect(MockMvcResultMatchers.jsonPath("$.statusCode", Matchers.is(errorDto.getStatusCode())))
           .andDo(MockMvcResultHandlers.print());
 
-      then(authenticationService).should(times(0)).reIssueAccessToken(anyString());
+      then(authenticationService).should(times(0)).authenticateWithRefreshToken(anyString());
     }
 
     @Test
@@ -224,10 +224,10 @@ public class AuthenticationControllerTest {
       //given
       RefreshTokenDto refreshTokenDto = new RefreshTokenDto();
       refreshTokenDto.setToken("expired_refresh_token");
-      given(authenticationService.selectRefreshToken(anyString()))
+      given(refreshTokenService.selectRefreshTokenByTokenValue(anyString()))
           .willReturn(Optional.of(new RefreshToken()));
 
-      given(authenticationService.reIssueAccessToken(any()))
+      given(authenticationService.authenticateWithRefreshToken(any()))
           .willThrow(new JwtAuthenticationException(JwtExceptionType.EXPIRED_REFRESH_TOKEN.getMessage(),
               JwtExceptionType.EXPIRED_REFRESH_TOKEN));
 

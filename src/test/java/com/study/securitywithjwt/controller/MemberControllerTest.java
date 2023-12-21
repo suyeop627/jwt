@@ -6,7 +6,7 @@ import com.study.securitywithjwt.dto.MemberSignupRequestDto;
 import com.study.securitywithjwt.dto.MemberSignupResponseDto;
 import com.study.securitywithjwt.exception.CustomAuthenticationEntryPoint;
 import com.study.securitywithjwt.jwt.JwtAuthenticationProvider;
-import com.study.securitywithjwt.service.member.MemberService;
+import com.study.securitywithjwt.service.MemberService;
 import com.study.securitywithjwt.utils.member.Gender;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Nested;

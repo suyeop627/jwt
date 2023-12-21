@@ -1,4 +1,4 @@
-package com.study.securitywithjwt.service.member.impl;
+package com.study.securitywithjwt.service;
 
 import com.study.securitywithjwt.domain.Member;
 import com.study.securitywithjwt.domain.Role;
@@ -8,6 +8,7 @@ import com.study.securitywithjwt.exception.ResourceDuplicatedException;
 import com.study.securitywithjwt.exception.ResourceNotFoundException;
 import com.study.securitywithjwt.repository.MemberRepository;
 import com.study.securitywithjwt.repository.RoleRepository;
+import com.study.securitywithjwt.service.MemberService;
 import com.study.securitywithjwt.utils.member.Gender;
 import com.study.securitywithjwt.utils.member.UserRole;
 import org.junit.jupiter.api.Nested;
@@ -28,7 +29,7 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.times;
 
 @ExtendWith(MockitoExtension.class)
-class MemberServiceImplTest {
+class MemberServiceTest {
 
   @Mock
   MemberRepository memberRepository;
@@ -36,7 +37,7 @@ class MemberServiceImplTest {
   @Mock
   RoleRepository roleRepository;
   @InjectMocks
-  MemberServiceImpl memberService;
+  MemberService memberService;
 
   @Mock
   PasswordEncoder passwordEncoder;

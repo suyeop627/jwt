@@ -3,7 +3,7 @@ package com.study.securitywithjwt.controller;
 import com.study.securitywithjwt.dto.ErrorDto;
 import com.study.securitywithjwt.dto.MemberSignupRequestDto;
 import com.study.securitywithjwt.dto.MemberSignupResponseDto;
-import com.study.securitywithjwt.service.member.MemberService;
+import com.study.securitywithjwt.service.MemberService;
 import com.study.securitywithjwt.utils.RequestValidationUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -44,6 +44,17 @@ public class MemberController {
   }
 //TODO 권한 관련 시나리오 지정
 
+
+  //get member list - all member
+
+  ///get member - authenticated
+
+  //put member - manager, admin, member by self
+
+  //delete member - admin, member by self
+
+
+
 //@GetMapping
 //public ResponseEntity<MemberInfoDto> getMembers(@PathVariable("memberId") Long memberId){
 //  return ResponseEntity.ok().body(memberService.getAllMembers(memberId));
@@ -74,12 +85,5 @@ public class MemberController {
   // 로직 정리
 
 
-  //get member list - all member
-
-  ///get member - authenticated
-
-  //put member - manager, admin, member by self
-
-  //delete member - admin, member by self
 
 }

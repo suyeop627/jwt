@@ -16,7 +16,7 @@ public class JwtAuthenticationToken extends AbstractAuthenticationToken {
     this.token = unAuthenticatedToken;
     setAuthenticated(false);
   }
-//토큰 + 사용자 정보 있음 ->
+//토큰 + 사용자 정보 있음 ->Authentication
   public JwtAuthenticationToken(Object principal, String authenticatedToken, Collection<? extends GrantedAuthority> authorities) {
     super(authorities);
     this.principal = principal;

@@ -17,6 +17,7 @@ public class MemberDto {
   private Long memberId;
   private String email;
   private String name;
+  @Builder.Default
   private Set<String> roles = new HashSet<>();
   private Gender gender;
 }

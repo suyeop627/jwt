@@ -54,6 +54,7 @@ public class ControllerExceptionHandler {
   @ExceptionHandler(JwtException.class)
   public ResponseEntity<ErrorDto> handleException(JwtException e, HttpServletRequest request) {
     ErrorDto errorDto = createErrorDto(request, e, HttpStatus.UNAUTHORIZED.value());
+
     if(e instanceof ExpiredJwtException){
       MultiValueMap<String, String> header = new LinkedMultiValueMap<>();
       header.add("JwtException", JwtExceptionType.EXPIRED_ACCESS_TOKEN.getCode());
