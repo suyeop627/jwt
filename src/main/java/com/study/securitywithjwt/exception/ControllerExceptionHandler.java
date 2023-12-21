@@ -1,11 +1,15 @@
 package com.study.securitywithjwt.exception;
 
+import com.study.securitywithjwt.dto.ErrorDto;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
@@ -49,9 +53,23 @@ public class ControllerExceptionHandler {
 
   @ExceptionHandler(JwtException.class)
   public ResponseEntity<ErrorDto> handleException(JwtException e, HttpServletRequest request) {
-
+    ErrorDto errorDto = createErrorDto(request, e, HttpStatus.UNAUTHORIZED.value());
+    if(e instanceof ExpiredJwtException){
+      MultiValueMap<String, String> header = new LinkedMultiValueMap<>();
+      header.add("JwtException", JwtExceptionType.EXPIRED_ACCESS_TOKEN.getCode());
+      return new ResponseEntity<>(errorDto,header, HttpStatus.UNAUTHORIZED);
+    }
+    return new ResponseEntity<>(errorDto, HttpStatus.UNAUTHORIZED);
+  }
+  @ExceptionHandler(JwtAuthenticationException.class)
+  public ResponseEntity<ErrorDto> handleException(JwtAuthenticationException e, HttpServletRequest request){
     ErrorDto errorDto = createErrorDto(request, e, HttpStatus.UNAUTHORIZED.value());
 
+    if(e.getJwtExceptionType()==JwtExceptionType.EXPIRED_REFRESH_TOKEN){
+      MultiValueMap<String, String> header = new LinkedMultiValueMap<>();
+      header.add("JwtException", JwtExceptionType.EXPIRED_REFRESH_TOKEN.getCode());
+      return new ResponseEntity<>(errorDto,header, HttpStatus.UNAUTHORIZED);
+    }
     return new ResponseEntity<>(errorDto, HttpStatus.UNAUTHORIZED);
   }
 

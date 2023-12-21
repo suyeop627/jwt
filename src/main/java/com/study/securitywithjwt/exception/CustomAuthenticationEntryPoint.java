@@ -1,6 +1,7 @@
 package com.study.securitywithjwt.exception;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.study.securitywithjwt.dto.ErrorDto;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -11,7 +12,6 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.time.LocalDateTime;
 
@@ -24,60 +24,53 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
     this.objectMapper = objectMapper;
   }
 
+
+
+
   @Override
   public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
-    String exception = (String) request.getAttribute("exception");
-    if (exception != null) {
+    log.info("entry point access ");
+    if (authException instanceof JwtAuthenticationException exception) {
+      //String exception = (String) request.getAttribute("exception");
+      //if(exception!=null)
       log.error("authentication entry point");
-      if (exception.equals(JwtExceptionType.EXPIRED_TOKEN.getCode())) {
+      if (exception.getJwtExceptionType() == JwtExceptionType.EXPIRED_ACCESS_TOKEN) {
         log.error("token expired");
-        setResponse(request, response, JwtExceptionType.EXPIRED_TOKEN);
-      } else if (exception.equals(JwtExceptionType.INVALID_TOKEN.getCode())) {
+        setResponse(request, response, exception);
+      } else if (exception.getJwtExceptionType() == JwtExceptionType.INVALID_TOKEN) {
         log.error("token invalid");
-        setResponse(request, response, JwtExceptionType.INVALID_TOKEN);
-      } else if (exception.equals(JwtExceptionType.TOKEN_NOT_FOUND.getCode())) {
+        setResponse(request, response, exception);
+      } else if (exception.getJwtExceptionType() == JwtExceptionType.TOKEN_NOT_FOUND) {
         log.error("token not found");
-        setResponse(request, response, JwtExceptionType.TOKEN_NOT_FOUND);
+        setResponse(request, response, exception);
       } else {
-        log.error("unknown error");
-        setResponse(request, response, JwtExceptionType.UNKNOWN_ERROR);
+        log.error("unknown error regarding jwt occurred");
+        setResponse(request, response, exception);
       }
-    }else{
-      setResponse(request, response, authException.getMessage());
+    } else {
+      setResponse(request, response, authException);
     }
 
   }
 
-  private void setResponse(HttpServletRequest request, HttpServletResponse response, JwtExceptionType jwtException) throws IOException {
+  private void setResponse(HttpServletRequest request, HttpServletResponse response, Exception exception) throws IOException {
+
+    if (exception instanceof JwtAuthenticationException jwtException) {
+      response.setHeader("JwtException", jwtException.getJwtExceptionType().getCode());
+    }
 
     response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-    response.setHeader("jwtException", jwtException.getCode());
     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+
     ErrorDto errorDto = ErrorDto.builder()
         .localDateTime(LocalDateTime.now())
-        .message(jwtException.getMessage())
+        .message(exception.getMessage())
         .path(request.getRequestURI())
         .statusCode(HttpServletResponse.SC_UNAUTHORIZED)
         .build();
 
-    try (PrintWriter writer = response.getWriter()) { //try with resource - flush(), close()를 자동으로 호출해줌.
+    try (PrintWriter writer = response.getWriter()) {
       objectMapper.writeValue(writer, errorDto);
-    }
-  }
-
-
-  private void setResponse(HttpServletRequest request, HttpServletResponse response, String exceptionMessage) throws IOException {
-    try (OutputStream outputStream = response.getOutputStream()) { //try with resource - close()를 자동으로 호출해줌.
-      response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-      response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-      ErrorDto errorDto = ErrorDto.builder()
-          .localDateTime(LocalDateTime.now())
-          .message(exceptionMessage)
-          .path(request.getRequestURI())
-          .statusCode(HttpServletResponse.SC_UNAUTHORIZED)
-          .build();
-
-      new ObjectMapper().writeValue(outputStream,errorDto);
     }
   }
 }

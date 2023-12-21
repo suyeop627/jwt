@@ -1,23 +1,28 @@
 package com.study.securitywithjwt.service.auth.impl;
 
+import com.study.securitywithjwt.domain.Member;
 import com.study.securitywithjwt.domain.RefreshToken;
 import com.study.securitywithjwt.dto.LoginRequestDto;
 import com.study.securitywithjwt.dto.LoginResponseDto;
+import com.study.securitywithjwt.exception.JwtAuthenticationException;
+import com.study.securitywithjwt.exception.JwtExceptionType;
 import com.study.securitywithjwt.jwt.JwtUtils;
-import com.study.securitywithjwt.service.auth.AuthenticationService;
-import com.study.securitywithjwt.domain.Member;
 import com.study.securitywithjwt.security.user.MemberUserDetails;
+import com.study.securitywithjwt.service.auth.AuthenticationService;
 import com.study.securitywithjwt.service.refreshtoken.RefreshTokenService;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,10 +32,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
   private final AuthenticationManager authenticationManager;
   private final JwtUtils jwtUtils;
   private final RefreshTokenService refreshTokenService;
-  @Value("${jwt.type.accessToken}")
-  private String TYPE_ACCESS;
-  @Value("${jwt.type.refreshToken}")
-  private String TYPE_REFRESH;
+  private final String TYPE_ACCESS = "ACCESS";
+  private final String TYPE_REFRESH = "REFRESH";
 
   @Override
   public LoginResponseDto login(LoginRequestDto loginRequestDto) {
@@ -40,10 +43,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         new UsernamePasswordAuthenticationToken(
             loginRequestDto.getEmail(), loginRequestDto.getPassword())
     );
-    Optional<RefreshToken> refreshTokenSavedInDB = refreshTokenService.searchRefreshTokenByMemberEmail(loginRequestDto.getEmail());
+    Optional<RefreshToken> refreshTokenSavedInDB = refreshTokenService.selectRefreshTokenByMemberEmail(loginRequestDto.getEmail());
 
     refreshTokenSavedInDB.ifPresent(refreshToken -> refreshTokenService.deleteRefreshTokenById(refreshToken.getId()));
-
+    //principal -> MemberUserDetails
     Member member = ((MemberUserDetails) authentication.getPrincipal()).getMember();
 
 
@@ -70,13 +73,27 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         .build();
   }
   @Override
-  public Optional<RefreshToken> searchRefreshToken(String refreshToken) {
-    return refreshTokenService.searchRefreshTokenByTokenValue(refreshToken);
+  public Optional<RefreshToken> selectRefreshToken(String refreshToken) {
+    return refreshTokenService.selectRefreshTokenByTokenValue(refreshToken);
   }
 
   @Override
   public LoginResponseDto reIssueAccessToken(String refreshToken) {
-    Claims claimsFromRefreshToken = jwtUtils.getClaimsFromRefreshToken(refreshToken);
+    Claims claimsFromRefreshToken;
+    try{
+      claimsFromRefreshToken = jwtUtils.getClaimsFromRefreshToken(refreshToken);
+    }catch (ExpiredJwtException e){
+      //전달받은 토큰의 유효기간이 지난 경우, 기존 토큰 삭제 및 재인증 요청 -> exception handler
+      refreshTokenService.deleteRefreshToken(refreshToken);
+      throw new JwtAuthenticationException(JwtExceptionType.EXPIRED_REFRESH_TOKEN.getMessage(), JwtExceptionType.EXPIRED_REFRESH_TOKEN);
+    }catch (Exception e){
+      //전달받은 토큰을 parsing 할때 기타 예외가 발생한 경우 기존 토큰 삭제 및 예외 처리
+      refreshTokenService.deleteRefreshToken(refreshToken);
+      throw new JwtAuthenticationException(JwtExceptionType.UNKNOWN_ERROR.getMessage(), JwtExceptionType.UNKNOWN_ERROR);
+    }
+
+
+
     String name = claimsFromRefreshToken.get("name", String.class);
     String subject = claimsFromRefreshToken.getSubject();
     Long memberId = claimsFromRefreshToken.get("memberId", Long.class);

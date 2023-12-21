@@ -1,4 +1,4 @@
-package com.study.securitywithjwt.dao;
+package com.study.securitywithjwt.repository;
 
 import com.study.securitywithjwt.domain.Role;
 import com.study.securitywithjwt.utils.member.UserRole;

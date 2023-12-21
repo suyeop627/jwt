@@ -5,6 +5,7 @@ import com.study.securitywithjwt.dto.MemberInfoDto;
 import com.study.securitywithjwt.jwt.JwtAuthenticationToken;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.MethodParameter;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -25,7 +26,7 @@ public class LoggedInUserInfoArgumentResolver implements HandlerMethodArgumentRe
 
   @Override
   public boolean supportsParameter(MethodParameter parameter) {
-    return parameter.hasParameterAnnotation(LoggedInUserInfo.class) && parameter.getParameterType()==MemberInfo.class;
+    return parameter.hasParameterAnnotation(LoggedInUserInfo.class) && parameter.getParameterType() == MemberInfo.class;
   }
 
   @Override
@@ -35,30 +36,37 @@ public class LoggedInUserInfoArgumentResolver implements HandlerMethodArgumentRe
                                 WebDataBinderFactory binderFactory) throws Exception {
 
     Authentication authentication = null;
-    try{
+    try {
       authentication = SecurityContextHolder.getContext().getAuthentication();
-      log.info("contextPath : {}", webRequest.getContextPath());
-      log.info("native request : {}", webRequest.getNativeRequest());
-      Object details = authentication.getDetails();
-      if(authentication==null) {
-        throw new BadCredentialsException("@IfUserLoggedIn - > authentication not found");
+
+      if (authentication == null) {
+        throw new BadCredentialsException("LoggedInUserArgumentResolver -> authentication not found");
       }
-    }catch (Exception e){
+      if (authentication instanceof AnonymousAuthenticationToken) {
+        return null;
+      }
+
+    } catch (Exception e) {
       e.printStackTrace();
-      throw new BadCredentialsException("");
+      throw new BadCredentialsException("exception occurred in LoggedInUserInfoArgumentResolver");
     }
+
 
     JwtAuthenticationToken jwtAuthenticationToken = (JwtAuthenticationToken) authentication;
     Object details = jwtAuthenticationToken.getDetails();
-    MemberInfo memberInfo = new MemberInfo();
+
+
     Object principal = jwtAuthenticationToken.getPrincipal();
-    if(principal==null){
+    if (principal == null) {
       return null;
     }
+
     MemberInfoDto memberInfoDto = (MemberInfoDto) principal;
-    memberInfo.setName(memberInfoDto.getName());
-    memberInfo.setMemberId(memberInfoDto.getMemberId());
-    memberInfo.setEmail(memberInfoDto.getEmail());
+    MemberInfo memberInfo = MemberInfo.builder()
+        .memberId(memberInfoDto.getMemberId())
+        .email(memberInfoDto.getEmail())
+        .name(memberInfoDto.getName())
+        .build();
 
     Collection<GrantedAuthority> authorities = jwtAuthenticationToken.getAuthorities();
     Set<String> roles = authorities.stream()

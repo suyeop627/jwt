@@ -46,6 +46,8 @@ public class JwtAuthenticationProvider implements AuthenticationProvider {
 
   @Override
   public boolean supports(Class<?> authentication) {
+    //authentication parameter가 JwtAuthenticationToken클래스와 호환되는지.
+    //해당 provider 에서, 주어진 authentication 을 처리할 수 있는지 확인
     return JwtAuthenticationToken.class.isAssignableFrom(authentication);
   }
 }

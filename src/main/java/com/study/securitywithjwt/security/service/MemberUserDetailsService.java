@@ -1,7 +1,7 @@
 package com.study.securitywithjwt.security.service;
 
 import com.study.securitywithjwt.domain.Member;
-import com.study.securitywithjwt.dao.MemberRepository;
+import com.study.securitywithjwt.repository.MemberRepository;
 import com.study.securitywithjwt.security.user.MemberUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;

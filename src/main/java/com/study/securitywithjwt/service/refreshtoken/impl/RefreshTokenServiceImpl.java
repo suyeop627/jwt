@@ -1,7 +1,7 @@
 package com.study.securitywithjwt.service.refreshtoken.impl;
 
 import com.study.securitywithjwt.domain.RefreshToken;
-import com.study.securitywithjwt.dao.RefreshTokenRepository;
+import com.study.securitywithjwt.repository.RefreshTokenRepository;
 import com.study.securitywithjwt.service.refreshtoken.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,12 +22,12 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
   }
 
   @Override
-  public Optional<RefreshToken> searchRefreshTokenByTokenValue(String refreshToken) {
+  public Optional<RefreshToken> selectRefreshTokenByTokenValue(String refreshToken) {
     return refreshTokenRepository.findByToken(refreshToken);
   }
 
   @Override
-  public Optional<RefreshToken> searchRefreshTokenByMemberEmail(String email) {
+  public Optional<RefreshToken> selectRefreshTokenByMemberEmail(String email) {
     return refreshTokenRepository.findRefreshTokenByMemberEmail(email);
   }
 
@@ -44,13 +44,15 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
       if(optionalToken.isPresent()){
         refreshTokenRepository.deleteById(optionalToken.get().getId());
         log.info("logout complete, member id : {}", optionalToken.get().getMemberId());
-      }else{
-        //todo controller exception 처리
-        log.info("token not found");
-
       }
     }catch (Exception e){
+      log.error("deleteRefreshToken(token), token to delete is nonexistent. token : {}", token);
       e.printStackTrace();
     }
+  }
+
+  @Override
+  public void deleteRefreshTokenByMemberId(Long memberId) {
+    refreshTokenRepository.deleteByMemberId(memberId);
   }
 }

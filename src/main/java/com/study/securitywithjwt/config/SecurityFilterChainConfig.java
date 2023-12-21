@@ -15,6 +15,9 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsUtils;
 
+/**
+ * Security filter chain 설정 클래스
+ */
 @Configuration
 @EnableWebSecurity
 public class SecurityFilterChainConfig {
@@ -30,6 +33,19 @@ public class SecurityFilterChainConfig {
     this.customAuthenticationEntryPoint = customAuthenticationEntryPoint;
   }
 
+  /**
+   *SecurityFilterChain의 보안 구성을 정의함.<br>
+   * csrf 비활성화 - jwt 사용시, stateless한 세션을 사용하므로, csrf의 위험성이 낮음<br>
+   * cors 기본값 사용<br>
+   * formLogin, HttpBasic 인증 비활성화<br>
+   * Http 요청 권한 설정<br>
+   * 세션 설정(STATELESS)<br>
+   * JWT 인증 filter 및 provider 추가<br>
+   * 인증 예외처리 설정<br>
+   * @param http http 보안 구성을 정의함
+   * @return SecurityFilterChain 보안 구성을 정의한 SecurityFIlterChain 반환
+   *
+   */
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
     http.csrf(AbstractHttpConfigurer::disable)
@@ -38,12 +54,15 @@ public class SecurityFilterChainConfig {
         .httpBasic(AbstractHttpConfigurer::disable)
         .authorizeHttpRequests(httpRequest ->
             httpRequest
+                .requestMatchers(HttpMethod.POST,"/error").permitAll()
                 .requestMatchers(CorsUtils::isPreFlightRequest).permitAll()
                 .requestMatchers(HttpMethod.POST, "/members", "/auth/login", "/auth/refresh")
                 .permitAll()
-                .requestMatchers(HttpMethod.GET, "/board")
+                .requestMatchers(HttpMethod.GET,"/api")
                 .permitAll()
-                .requestMatchers("/admin")
+                .requestMatchers(HttpMethod.GET, "/api/admin")
+                .hasAnyRole("ADMIN", "MANAGER")
+                .requestMatchers("/api/admin")
                 .hasRole("ADMIN")
                 .anyRequest()
                 .authenticated()

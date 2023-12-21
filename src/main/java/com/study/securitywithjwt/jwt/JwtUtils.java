@@ -12,19 +12,20 @@ import java.util.Set;
 
 @Service
 public class JwtUtils {
-  @Value("${jwt.secretKey.accessToken}")
+  @Value("${jwt.key.accessToken}")
   private String ACCESS_TOKEN_KEY;
-
-  @Value("${jwt.secretKey.refreshToken}")
+  @Value("${jwt.key.refreshToken}")
   private String REFRESH_TOKEN_KEY;
-
   @Value("${jwt.type.accessToken}")
   private String ACCESS_TOKEN_TYPE;
+  @Value("${jwt.type.refreshToken}")
+  private String REFRESH_TOKEN_TYPE;
+  private final Long ACCESS_TOKEN_DURATION =  30 * 60 * 1000L; // 30 minutes
+  private final Long REFRESH_TOKEN_DURATION = 7 * 24 * 60 * 60 * 1000L; // 7 days
 
-  public final Long ACCESS_TOKEN_DURATION =  30 * 60 * 1000L; // 30 minutes
-
-  //public final Long REFRESH_TOKEN_DURATION = 7 * 24 * 60 * 60 * 1000L; // 7 days
-  public final Long REFRESH_TOKEN_DURATION = 2 * 60 * 1000L; // 7 days
+//  for test
+//  private final Long ACCESS_TOKEN_DURATION =  1L;
+//  private final Long REFRESH_TOKEN_DURATION = 30 * 60 * 1000L;
 
 
   public String issueToken(Long memberId, String subject, String name, Set<String> roles, String type) {
@@ -34,7 +35,6 @@ public class JwtUtils {
         .expiration(new Date(new Date().getTime()+getDuration(type)))
         .claim("name", name)
         .claim("roles", roles)
-        .claim("type", type)
         .claim("memberId", memberId)
         .signWith(getSecretKey(type))
         .compact();
@@ -46,16 +46,15 @@ public class JwtUtils {
   }
 
 
-  public String getSubject(Claims claims) {
-    return claims.getSubject();
-
-  }
+//  public String getSubject(Claims claims) {
+//    return claims.getSubject();
+//  }
   public Claims getClaimsFromAccessToken(String token){
     return getClaims(token, ACCESS_TOKEN_TYPE);
   }
 
   public Claims getClaimsFromRefreshToken(String token){
-    return getClaims(token, REFRESH_TOKEN_KEY);
+    return getClaims(token, REFRESH_TOKEN_TYPE);
   }
 
 
@@ -70,15 +69,17 @@ public class JwtUtils {
     return Keys.hmacShaKeyFor(key.getBytes());
   }
 
-  //토큰 유효성 검사
-  public boolean isTokenAccessTokenValid(String token, String username) {
-    String subject = getSubject(getClaimsFromAccessToken(token));
-    return subject.equals(username) && isTokenNotExpired(token);
-  }
 
-  public boolean isTokenNotExpired(String token) {
-    Date now = new Date();
-    return getClaimsFromAccessToken(token).getExpiration().before(now);
-  }
+// exception으로 대체
+//  //토큰 유효성 검사
+//  public boolean isTokenAccessTokenValid(String token, String username) {
+//    String subject = getSubject(getClaimsFromAccessToken(token));
+//    return subject.equals(username) && isTokenNotExpired(token);
+//  }
+//
+//  public boolean isTokenNotExpired(String token) {
+//    Date now = new Date();
+//    return getClaimsFromAccessToken(token).getExpiration().before(now);
+//  }
 
 }
