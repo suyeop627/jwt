@@ -3,7 +3,7 @@ package com.study.securitywithjwt.controller;
 import com.study.securitywithjwt.domain.RefreshToken;
 import com.study.securitywithjwt.dto.LoginRequestDto;
 import com.study.securitywithjwt.dto.LoginResponseDto;
-import com.study.securitywithjwt.dto.MemberInfo;
+import com.study.securitywithjwt.dto.MemberInfoInToken;
 import com.study.securitywithjwt.dto.RefreshTokenDto;
 import com.study.securitywithjwt.dto.ErrorDto;
 import com.study.securitywithjwt.exception.ResourceNotFoundException;
@@ -74,7 +74,7 @@ public class AuthenticationController {
 
   @DeleteMapping("/logout")
   @Transactional
-  public ResponseEntity logout(@LoggedInUserInfo MemberInfo loggedInMember) {
+  public ResponseEntity logout(@LoggedInUserInfo MemberInfoInToken loggedInMember) {
     if (loggedInMember == null) {
       log.info("logout called from not logged in user");
       return ResponseEntity.badRequest().build();

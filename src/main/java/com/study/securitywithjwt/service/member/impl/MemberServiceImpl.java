@@ -2,7 +2,7 @@ package com.study.securitywithjwt.service.member.impl;
 
 import com.study.securitywithjwt.domain.Member;
 import com.study.securitywithjwt.domain.Role;
-import com.study.securitywithjwt.dto.MemberInfoDto;
+import com.study.securitywithjwt.dto.MemberDto;
 import com.study.securitywithjwt.dto.MemberSignupRequestDto;
 import com.study.securitywithjwt.dto.MemberSignupResponseDto;
 import com.study.securitywithjwt.exception.ResourceDuplicatedException;
@@ -55,16 +55,17 @@ public class MemberServiceImpl implements MemberService {
   }
 
   @Override
-  public MemberInfoDto getMember(Integer memberId) {
+  public MemberDto getMember(Integer memberId) {
     Optional<Member> optionalMember = memberRepository.findById(Long.valueOf(memberId));
 
     if (optionalMember.isPresent()) {
       Member member = optionalMember.get();
 
-      return MemberInfoDto.builder()
+      return MemberDto.builder()
           .memberId(member.getMemberId())
           .email(member.getEmail())
           .name(member.getName())
+          .roles(member.getRoleNameSet())
           .build();
     }else{
       throw new ResourceNotFoundException(String.format("member id %s is not found", memberId));

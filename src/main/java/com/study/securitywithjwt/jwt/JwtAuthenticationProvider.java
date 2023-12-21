@@ -1,6 +1,6 @@
 package com.study.securitywithjwt.jwt;
 
-import com.study.securitywithjwt.dto.MemberInfoDto;
+import com.study.securitywithjwt.dto.MemberInfoInToken;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,13 +34,16 @@ public class JwtAuthenticationProvider implements AuthenticationProvider {
         .map(SimpleGrantedAuthority::new)
         .collect(Collectors.toSet());
 
-    MemberInfoDto loginMemberInfo = MemberInfoDto.builder()
+    MemberInfoInToken memberInfoInToken = MemberInfoInToken.builder()
         .memberId(claimsFromAccessToken.get("memberId", Long.class))
         .email(claimsFromAccessToken.getSubject())
-        .name(claimsFromAccessToken.get("name", String.class)).build();
-    log.info("user {} get authentication", loginMemberInfo);
+        .name(claimsFromAccessToken.get("name", String.class))
+        .roles(new HashSet<>(roles))
+        .build();
 
-    return new JwtAuthenticationToken(loginMemberInfo, token, authorities);
+    log.info("user {} get authentication", memberInfoInToken);
+
+    return new JwtAuthenticationToken(memberInfoInToken, token, authorities);
   }
 
 

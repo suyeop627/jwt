@@ -23,7 +23,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -46,11 +45,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     Optional<RefreshToken> refreshTokenSavedInDB = refreshTokenService.selectRefreshTokenByMemberEmail(loginRequestDto.getEmail());
 
     refreshTokenSavedInDB.ifPresent(refreshToken -> refreshTokenService.deleteRefreshTokenById(refreshToken.getId()));
+
     //principal -> MemberUserDetails
     Member member = ((MemberUserDetails) authentication.getPrincipal()).getMember();
 
 
-    Set<String> roles = member.getRoles().stream().map(role->role.getName().name()).collect(Collectors.toSet());
+    Set<String> roles = member.getRoleNameSet();
 
 
     String accessToken = jwtUtils.issueToken(member.getMemberId(), member.getEmail(), member.getName(), roles, TYPE_ACCESS);

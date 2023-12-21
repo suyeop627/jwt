@@ -255,8 +255,11 @@ public class AuthenticationControllerTest {
     @Test
     void logout_validState_deleteTokenInDB() throws Exception {
       //given
-      MemberInfo loggedInMember = new MemberInfo();
-      loggedInMember.setMemberId(1L);
+      MemberInfoInToken loggedInMember =
+          MemberInfoInToken
+              .builder()
+              .memberId(1L)
+              .build();
       given(argumentResolver.supportsParameter(any())).willReturn(true);
       given(argumentResolver.resolveArgument(any(), any(), any(), any())).willReturn(loggedInMember);
 

@@ -1,6 +1,6 @@
 package com.study.securitywithjwt.jwt;
 
-import com.study.securitywithjwt.dto.MemberInfoDto;
+import com.study.securitywithjwt.dto.MemberInfoInToken;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import org.junit.jupiter.api.Test;
@@ -11,6 +11,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -47,13 +48,14 @@ class JwtAuthenticationProviderTest {
 
     //when
     JwtAuthenticationToken jwtAuthenticationToken = jwtAuthenticationProvider.authenticate(authentication);
-    MemberInfoDto principal =(MemberInfoDto) jwtAuthenticationToken.getPrincipal();
+    MemberInfoInToken principal =(MemberInfoInToken) jwtAuthenticationToken.getPrincipal();
 
     //then
     assertThat(principal).isNotNull();
     assertThat(principal.getName()).isEqualTo(name);
     assertThat(principal.getEmail()).isEqualTo(email);
     assertThat(principal.getMemberId()).isEqualTo(memberId);
+    assertThat(principal.getRoles()).isEqualTo(new HashSet<>(roles));
   }
 
   @Test

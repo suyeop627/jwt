@@ -1,6 +1,6 @@
 package com.study.securitywithjwt.controller;
 
-import com.study.securitywithjwt.dto.MemberInfo;
+import com.study.securitywithjwt.dto.MemberInfoInToken;
 import com.study.securitywithjwt.utils.annotation.LoggedInUserInfo;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -12,31 +12,31 @@ import org.springframework.web.bind.annotation.*;
 public class AuthTestController {
 
   @GetMapping//permit all
-  public ResponseEntity<?> getForAllUsers(@LoggedInUserInfo MemberInfo memberInfo){
-    return ResponseEntity.ok().body(memberInfo);
+  public ResponseEntity<?> getForAllUsers(@LoggedInUserInfo MemberInfoInToken memberDto){
+    return ResponseEntity.ok().body(memberDto);
   }
 
   @PostMapping//authenitcated
-  public ResponseEntity<?> postForAuthenticatedUsers(@LoggedInUserInfo MemberInfo memberInfo){
+  public ResponseEntity<?> postForAuthenticatedUsers(@LoggedInUserInfo MemberInfoInToken memberDto){
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     System.out.println("authentication = " + authentication);
 
 
-    return ResponseEntity.ok().body(memberInfo);
+    return ResponseEntity.ok().body(memberDto);
   }
 
   @GetMapping("/admin") //manager / role_admin
-  public ResponseEntity<?> getForAdminAndManager(@LoggedInUserInfo MemberInfo memberInfo){
-    return ResponseEntity.ok().body(memberInfo);
+  public ResponseEntity<?> getForAdminAndManager(@LoggedInUserInfo MemberInfoInToken memberDto){
+    return ResponseEntity.ok().body(memberDto);
   }
 
   @PostMapping("/admin") //role_admin only
-  public ResponseEntity<?> postForAdmin(@LoggedInUserInfo MemberInfo memberInfo){
-    return ResponseEntity.ok().body(memberInfo);
+  public ResponseEntity<?> postForAdmin(@LoggedInUserInfo MemberInfoInToken memberDto){
+    return ResponseEntity.ok().body(memberDto);
   }
 
   @DeleteMapping("/admin") //role_admin only
-  public ResponseEntity<?> deleteForAdmin(@LoggedInUserInfo MemberInfo memberInfo){
-    return ResponseEntity.ok().body(memberInfo);
+  public ResponseEntity<?> deleteForAdmin(@LoggedInUserInfo MemberInfoInToken memberDto){
+    return ResponseEntity.ok().body(memberDto);
   }
 }

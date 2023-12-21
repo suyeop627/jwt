@@ -1,6 +1,6 @@
 package com.study.securitywithjwt.testUtils.customMockUser;
 
-import com.study.securitywithjwt.dto.MemberInfoDto;
+import com.study.securitywithjwt.dto.MemberInfoInToken;
 import com.study.securitywithjwt.jwt.JwtAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -17,7 +17,7 @@ public class WithMockCustomSecurityContextFactory implements WithSecurityContext
   public SecurityContext createSecurityContext(WithMockCustomUser customUser) {
     SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
 
-    MemberInfoDto memberInfo = new MemberInfoDto();
+    MemberInfoInToken memberInfo = new MemberInfoInToken();
     memberInfo.setEmail(customUser.username());
     memberInfo.setName(customUser.name());
 
@@ -29,7 +29,7 @@ public class WithMockCustomSecurityContextFactory implements WithSecurityContext
 
     String mockToken = "token_token_token_token";
 
-    Authentication auth = new JwtAuthenticationToken(memberInfo,mockToken , authorities);
+    Authentication auth = new JwtAuthenticationToken(memberInfo, mockToken , authorities);
     securityContext.setAuthentication(auth);
     return securityContext;
   }
