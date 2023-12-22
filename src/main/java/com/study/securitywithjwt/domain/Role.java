@@ -6,7 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-
+//회원 역할 엔티티
 @Entity
 @Table(name="role")
 @NoArgsConstructor

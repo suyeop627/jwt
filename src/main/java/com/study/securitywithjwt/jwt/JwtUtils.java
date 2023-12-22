@@ -1,5 +1,6 @@
 package com.study.securitywithjwt.jwt;
 
+import com.study.securitywithjwt.dto.MemberInfoInToken;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -8,7 +9,6 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
-import java.util.Set;
 
 @Service
 public class JwtUtils {
@@ -28,14 +28,14 @@ public class JwtUtils {
 //  private final Long REFRESH_TOKEN_DURATION = 30 * 60 * 1000L;
 
 
-  public String issueToken(Long memberId, String subject, String name, Set<String> roles, String type) {
+  public String issueToken(MemberInfoInToken memberInfoInToken, String type) {
     String token = Jwts.builder()
-        .subject(subject)
+        .subject(memberInfoInToken.getEmail())
         .issuedAt(new Date())
         .expiration(new Date(new Date().getTime()+getDuration(type)))
-        .claim("name", name)
-        .claim("roles", roles)
-        .claim("memberId", memberId)
+        .claim("name", memberInfoInToken.getName())
+        .claim("roles", memberInfoInToken.getRoles())
+        .claim("memberId", memberInfoInToken.getMemberId())
         .signWith(getSecretKey(type))
         .compact();
     return token;

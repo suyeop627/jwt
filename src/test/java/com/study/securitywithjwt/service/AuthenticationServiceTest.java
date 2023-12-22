@@ -5,6 +5,7 @@ import com.study.securitywithjwt.domain.RefreshToken;
 import com.study.securitywithjwt.domain.Role;
 import com.study.securitywithjwt.dto.LoginRequestDto;
 import com.study.securitywithjwt.dto.LoginResponseDto;
+import com.study.securitywithjwt.dto.MemberInfoInToken;
 import com.study.securitywithjwt.exception.JwtAuthenticationException;
 import com.study.securitywithjwt.exception.JwtExceptionType;
 import com.study.securitywithjwt.jwt.JwtUtils;
@@ -80,7 +81,7 @@ class AuthenticationServiceTest {
     void login_tokenExistInDB_callDeleteRefreshTokenByIdAndReturnLoginResponseDto() {
       //given
       given(authenticationManager.authenticate(any())).willReturn(authentication);
-      given(jwtUtils.issueToken(anyLong(), anyString(), anyString(), anySet(), anyString())).willReturn("createdAccessTokenForTest", "createdRefreshTokenForTest");
+      given(jwtUtils.issueToken(any(MemberInfoInToken.class), anyString())).willReturn("createdAccessTokenForTest", "createdRefreshTokenForTest");
       RefreshToken refreshToken = new RefreshToken();
       refreshToken.setId(1L);
       given(refreshTokenService.selectRefreshTokenByMemberEmail(anyString())).willReturn(Optional.of(refreshToken));
@@ -102,7 +103,7 @@ class AuthenticationServiceTest {
     void login_nonexistentTokenInDB_returnLoginResponseDto() {
       //given
       given(authenticationManager.authenticate(any())).willReturn(authentication);
-      given(jwtUtils.issueToken(anyLong(), anyString(), anyString(), anySet(), anyString())).willReturn("createdAccessTokenForTest", "createdRefreshTokenForTest");
+      given(jwtUtils.issueToken(any(MemberInfoInToken.class), anyString())).willReturn("createdAccessTokenForTest", "createdRefreshTokenForTest");
 
       given(refreshTokenService.selectRefreshTokenByMemberEmail(anyString())).willReturn(Optional.of(new RefreshToken()));
       //when
@@ -135,7 +136,7 @@ class AuthenticationServiceTest {
 
     System.out.println("claims = " + claims);
     given(jwtUtils.getClaimsFromRefreshToken(anyString())).willReturn(claims);
-    given(jwtUtils.issueToken(anyLong(), anyString(), anyString(), anySet(), anyString())).willReturn("re_created_accessToken");
+    given(jwtUtils.issueToken(any(MemberInfoInToken.class), anyString())).willReturn("re_created_accessToken");
     //when
     LoginResponseDto loginResponseDto = authenticationService.authenticateWithRefreshToken(refreshToken);
 
@@ -157,6 +158,6 @@ class AuthenticationServiceTest {
     assertThatThrownBy(() -> authenticationService.authenticateWithRefreshToken(expiredRefreshToken))
         .isInstanceOf(JwtAuthenticationException.class).hasMessage(JwtExceptionType.EXPIRED_REFRESH_TOKEN.getMessage());
 
-    then(refreshTokenService).should(times(1)).deleteRefreshToken(expiredRefreshToken);
+    then(refreshTokenService).should(times(1)).deleteRefreshTokenByToken(expiredRefreshToken);
   }
 }

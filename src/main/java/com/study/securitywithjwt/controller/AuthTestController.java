@@ -3,8 +3,6 @@ package com.study.securitywithjwt.controller;
 import com.study.securitywithjwt.dto.MemberInfoInToken;
 import com.study.securitywithjwt.utils.annotation.LoggedInUserInfo;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,10 +16,6 @@ public class AuthTestController {
 
   @PostMapping//authenitcated
   public ResponseEntity<?> postForAuthenticatedUsers(@LoggedInUserInfo MemberInfoInToken memberDto){
-    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    System.out.println("authentication = " + authentication);
-
-
     return ResponseEntity.ok().body(memberDto);
   }
 

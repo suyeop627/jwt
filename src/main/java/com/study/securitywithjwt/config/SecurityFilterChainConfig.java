@@ -33,19 +33,15 @@ public class SecurityFilterChainConfig {
     this.customAuthenticationEntryPoint = customAuthenticationEntryPoint;
   }
 
-  /**
-   *SecurityFilterChain의 보안 구성을 정의함.<br>
-   * csrf 비활성화 - jwt 사용시, stateless한 세션을 사용하므로, csrf의 위험성이 낮음<br>
-   * cors 기본값 사용<br>
-   * formLogin, HttpBasic 인증 비활성화<br>
-   * Http 요청 권한 설정<br>
-   * 세션 설정(STATELESS)<br>
-   * JWT 인증 filter 및 provider 추가<br>
-   * 인증 예외처리 설정<br>
-   * @param http http 보안 구성을 정의함
-   * @return SecurityFilterChain 보안 구성을 정의한 SecurityFIlterChain 반환
-   *
-   */
+
+// SecurityFilterChain의 보안 구성을 정의함.
+// csrf 비활성화 - jwt 사용시, stateless한 세션을 사용하므로, csrf의 위험성이 낮음<
+// cors 기본값 사용
+// formLogin, HttpBasic 인증 비활성화
+// Http 요청 권한 설정
+// 세션 설정(STATELESS)
+// JWT 인증 filter 및 provider 추가
+// 인증 예외처리 설정
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
     http.csrf(AbstractHttpConfigurer::disable)
@@ -54,16 +50,13 @@ public class SecurityFilterChainConfig {
         .httpBasic(AbstractHttpConfigurer::disable)
         .authorizeHttpRequests(httpRequest ->
             httpRequest
-                .requestMatchers(HttpMethod.POST,"/error").permitAll()
                 .requestMatchers(CorsUtils::isPreFlightRequest).permitAll()
                 .requestMatchers(HttpMethod.POST, "/members", "/auth/login", "/auth/refresh")
                 .permitAll()
-                .requestMatchers(HttpMethod.GET,"/api")
-                .permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/admin")
+                .requestMatchers(HttpMethod.GET, "/members", "/api/customers")
+                .authenticated()
+                .requestMatchers("/api/customers")
                 .hasAnyRole("ADMIN", "MANAGER")
-                .requestMatchers("/api/admin")
-                .hasRole("ADMIN")
                 .anyRequest()
                 .authenticated()
 

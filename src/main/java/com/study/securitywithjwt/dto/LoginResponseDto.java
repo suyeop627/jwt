@@ -1,7 +1,7 @@
 package com.study.securitywithjwt.dto;
 
 import lombok.*;
-
+//회원 로그인 성공시 응답 dto
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor

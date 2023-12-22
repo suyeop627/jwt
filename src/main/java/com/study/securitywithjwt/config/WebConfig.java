@@ -11,9 +11,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.List;
 
-/**
- * Cors 설정 및 argumentResolver를 추가하는 설정 클래스
- */
+//Cors 설정 및 argumentResolver를 추가하는 설정 클래스
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
   private final LoggedInUserInfoArgumentResolver loggedInUserInfoArgumentResolver;

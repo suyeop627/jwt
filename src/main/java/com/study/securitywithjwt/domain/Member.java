@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
-
+//회원 엔티티
 @Entity
 @Table(name="member")
 @Builder
@@ -35,6 +35,9 @@ public class Member {
   @JsonIgnore
   @Column(length = 500)
   private String password;
+
+  @Column(length = 20, unique = true)
+  private String phone;
 
   @CreationTimestamp
   private LocalDateTime regdate;

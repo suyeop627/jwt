@@ -3,6 +3,7 @@ package com.study.securitywithjwt.dto;
 import lombok.*;
 
 import java.time.LocalDateTime;
+//회원 가입 성공시, 응답 정보 전달 dto
 @Data
 @Builder
 @AllArgsConstructor

@@ -2,6 +2,7 @@ package com.study.securitywithjwt.jwt;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.study.securitywithjwt.dto.MemberInfoInToken;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
@@ -46,9 +47,13 @@ class JwtUtilsTest {
     String subject = "test@test.com";
     String name = "testName";
     Set<String> roles = Set.of("ROLE_USER", "ROLE_ADMIN");
+
+    MemberInfoInToken memberInfoInToken = MemberInfoInToken.builder()
+        .memberId(memberId).name(name).email(subject).roles(roles).build();
+
     String type = ACCESS_TOKEN_TYPE;
     //when
-    String issuedToken = jwtUtils.issueToken(memberId, subject, name, roles, type);
+    String issuedToken = jwtUtils.issueToken(memberInfoInToken, type);
 
     //then
     Claims claimsFromIssuedToken = jwtUtils.getClaimsFromAccessToken(issuedToken);
@@ -74,8 +79,15 @@ class JwtUtilsTest {
     String subject = "test@test.com";
     String name = "testName";
     Set<String> roles = Set.of("ROLE_USER", "ROLE_ADMIN");
+
+    MemberInfoInToken memberInfoInToken = MemberInfoInToken.builder()
+        .memberId(memberId).name(name).email(subject).roles(roles).build();
+
     String type = ACCESS_TOKEN_TYPE;
-    String issuedToken = jwtUtils.issueToken(memberId, subject, name, roles, type);
+
+
+
+    String issuedToken = jwtUtils.issueToken(memberInfoInToken, type);
 
     //when
     Claims claimsFromIssuedToken = jwtUtils.getClaimsFromAccessToken(issuedToken);
@@ -100,8 +112,11 @@ class JwtUtilsTest {
     String subject = "test@test.com";
     String name = "testName";
     Set<String> roles = Set.of("ROLE_USER", "ROLE_ADMIN");
+    MemberInfoInToken memberInfoInToken = MemberInfoInToken.builder()
+        .memberId(memberId).name(name).email(subject).roles(roles).build();
+
     String type = REFRESH_TOKEN_TYPE;
-    String issuedToken = jwtUtils.issueToken(memberId, subject, name, roles, type);
+    String issuedToken = jwtUtils.issueToken(memberInfoInToken, type);
 
     //when
     Claims claimsFromIssuedToken = jwtUtils.getClaimsFromRefreshToken(issuedToken);

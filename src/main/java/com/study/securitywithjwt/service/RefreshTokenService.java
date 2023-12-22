@@ -35,22 +35,12 @@ public class RefreshTokenService {
     refreshTokenRepository.deleteById(id);
   }
 
-
-  public void deleteRefreshToken(String token) {
-
-    Optional<RefreshToken> optionalToken = refreshTokenRepository.findByToken(token);
-    try {
-      if(optionalToken.isPresent()){
-        refreshTokenRepository.deleteById(optionalToken.get().getId());
-        log.info("logout complete, member id : {}", optionalToken.get().getMemberId());
-      }
-    }catch (Exception e){
-      log.error("deleteRefreshToken(token), token to delete is nonexistent. token : {}", token);
-      e.printStackTrace();
-    }
+//refresh token 만료시 호출
+  public void deleteRefreshTokenByToken(String token) {
+    refreshTokenRepository.deleteByToken(token);
   }
 
-
+//로그아웃 시 호출
   public void deleteRefreshTokenByMemberId(Long memberId) {
     refreshTokenRepository.deleteByMemberId(memberId);
   }

@@ -43,7 +43,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     //access token이 필요 없는 경우(refresh token으로 처리되거나 token을 발급 받기 위한 요청)
     if (request.getRequestURI().equals("/auth/refresh") ||request.getRequestURI().equals("/auth/login")) {
-      log.info("JwtAuthenticationFilter passed -> {} ", request.getRequestURI());
+      log.info("JwtAuthenticationFilter passed, {} ", request.getRequestURI());
       filterChain.doFilter(request, response);
       return;
     }
@@ -51,7 +51,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     try {
       String token = getTokenFromRequest(request);
       if(token==null){
-        log.info("token null");
+        log.info("token is null, call filterChain.doFilter()");
         filterChain.doFilter(request, response);
         return;
       }
@@ -66,15 +66,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       filterChain.doFilter(request, response);
 
     } catch (ExpiredJwtException e) {
-      log.error(JwtExceptionType.EXPIRED_ACCESS_TOKEN.getMessage());
       callAuthenticationEntryPoint(request, response, JwtExceptionType.EXPIRED_ACCESS_TOKEN);
 
     } catch (NullPointerException  | IllegalArgumentException e) {
-      log.error(JwtExceptionType.TOKEN_NOT_FOUND.getMessage());
       callAuthenticationEntryPoint(request, response, JwtExceptionType.TOKEN_NOT_FOUND);
 
     } catch (MalformedJwtException e) {
-      log.error(JwtExceptionType.INVALID_TOKEN.getMessage());
       callAuthenticationEntryPoint(request, response, JwtExceptionType.INVALID_TOKEN);
 
     } catch (Exception e){
@@ -89,13 +86,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
   }
   private String getTokenFromRequest(HttpServletRequest request) {
     String authorizationHeader = request.getHeader("Authorization");
-    log.error(request.getHeader("Authorization"));
     if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
       return null;
     }
     return authorizationHeader.split(" ")[1];
   }
   private void callAuthenticationEntryPoint(HttpServletRequest request, HttpServletResponse response, JwtExceptionType jwtExceptionType) throws IOException, ServletException {
+    log.error("exception {} thrown. {}",jwtExceptionType.getCode(), jwtExceptionType.getMessage());
     JwtAuthenticationException exception = new JwtAuthenticationException(jwtExceptionType);
     authenticationEntryPoint.commence(request, response,exception);
   }
