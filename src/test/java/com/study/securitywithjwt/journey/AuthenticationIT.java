@@ -49,51 +49,55 @@ public class AuthenticationIT {
   }
   @Test
   void loginAndSignupIT() {
-    String email = "test123@test.com";
-    String password = "00000000"; //password size is too short
-    LoginRequestDto loginRequestDto = new LoginRequestDto(email, password);
+    String validEmail = "test@test.com";
+    String validPassword = "00000000";
+    String validPhone = "01011111111";
+    String validName = "name";
+    LoginRequestDto loginRequestDto = new LoginRequestDto(validEmail, validPassword);
 
     MemberSignupRequestDto signupRequestDto = new MemberSignupRequestDto();
-    signupRequestDto.setEmail(email);
-    signupRequestDto.setName("name");
-    signupRequestDto.setPassword(password);
+    signupRequestDto.setEmail(validEmail);
+    signupRequestDto.setName(validName);
+    signupRequestDto.setPassword(validPassword);
     signupRequestDto.setGender(Gender.MALE);
+    signupRequestDto.setPhone(validPhone);
 
 
-    //before signup
+    //before signup - login fail
     postLoginRequestWithLoginRequestDto(loginRequestDto)
         .expectStatus()
         .isUnauthorized();
 
-
     //sign up - email malformed
     signupRequestDto.setEmail("test");
-    signupRequestDto.setPassword("00000000");
 
     postSignUpRequestWIthSignupRequestDto(signupRequestDto)
         .expectStatus()
         .isBadRequest();
+    signupRequestDto.setEmail(validEmail);
 
     //sign up - password malformed
-    signupRequestDto.setEmail("test@test.com");
     signupRequestDto.setPassword("000");
     postSignUpRequestWIthSignupRequestDto(signupRequestDto)
         .expectStatus()
         .isBadRequest();
+    signupRequestDto.setPassword(validPassword);
 
     //sign up - name malformed
-    signupRequestDto.setEmail("test@test.com");
-    signupRequestDto.setPassword("00000000");
     signupRequestDto.setName("d");
     postSignUpRequestWIthSignupRequestDto(signupRequestDto)
         .expectStatus()
         .isBadRequest();
+    signupRequestDto.setName(validName);
+
+    //sign up - phone malformed
+    signupRequestDto.setPhone("11111111111");
+    postSignUpRequestWIthSignupRequestDto(signupRequestDto)
+        .expectStatus()
+        .isBadRequest();
+    signupRequestDto.setPhone(validPhone);
 
     //sign up - ok
-    signupRequestDto.setEmail("test@test.com");
-    signupRequestDto.setPassword("00000000");
-    signupRequestDto.setName("name");
-
     MemberSignupResponseDto signupResponseDto = MemberSignupResponseDto.builder()
         .email(signupRequestDto.getEmail()).name(signupRequestDto.getName()).build();
     EntityExchangeResult<MemberSignupResponseDto> responseEntityExchangeResult = postSignUpRequestWIthSignupRequestDto(signupRequestDto)
@@ -205,6 +209,7 @@ public class AuthenticationIT {
       signupRequestDto.setPassword("00000000");
       signupRequestDto.setName("testName");
       signupRequestDto.setGender(Gender.MALE);
+      signupRequestDto.setPhone("01000000000");
 
 
       webTestClient.post().uri("/members")

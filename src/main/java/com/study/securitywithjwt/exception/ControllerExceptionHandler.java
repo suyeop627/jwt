@@ -62,6 +62,7 @@ public class ControllerExceptionHandler {
     }
     return new ResponseEntity<>(errorDto, HttpStatus.UNAUTHORIZED);
   }
+
   @ExceptionHandler(JwtAuthenticationException.class)
   public ResponseEntity<ErrorDto> handleException(JwtAuthenticationException e, HttpServletRequest request){
     ErrorDto errorDto = createErrorDto(request, e, HttpStatus.UNAUTHORIZED.value());
@@ -73,9 +74,6 @@ public class ControllerExceptionHandler {
     }
     return new ResponseEntity<>(errorDto, HttpStatus.UNAUTHORIZED);
   }
-
-
-
 
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ErrorDto> handleException(Exception e, HttpServletRequest request) {

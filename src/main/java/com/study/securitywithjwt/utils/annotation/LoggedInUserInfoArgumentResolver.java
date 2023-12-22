@@ -37,15 +37,14 @@ public class LoggedInUserInfoArgumentResolver implements HandlerMethodArgumentRe
     Authentication authentication = null;
     try {
       authentication = SecurityContextHolder.getContext().getAuthentication();
-      if (authentication == null) {
-        throw new BadCredentialsException("LoggedInUserArgumentResolver -> authentication not found");
+
+      if (authentication == null || authentication instanceof AnonymousAuthenticationToken) {
+       return null;
       }
-      if (authentication instanceof AnonymousAuthenticationToken) {
-        return null;
-      }
+
     } catch (Exception e) {
-      e.printStackTrace();
-      throw new BadCredentialsException("exception occurred in LoggedInUserInfoArgumentResolver");
+      log.error("Exception occurred in LoggedInUserInfoArgumentResolver. {}, {}", e.getMessage(), e.getCause());
+      throw new BadCredentialsException("exception occurred in LoggedInUserInfoArgumentResolver",e);
     }
 
     JwtAuthenticationToken jwtAuthenticationToken = (JwtAuthenticationToken) authentication;

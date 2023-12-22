@@ -13,11 +13,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
 import java.util.Set;
-/**
- * 애플리케이션 실행 시, 기본적인 데이터를 DB에 저장하기 위한 클래스<br>
- * ROLE 3가지(USER, MANAGER, ADMIN)은 항상 DB에 존재해야 함.<br>
- * MEMBER는 테스트 용 사용자 생성 목적.
- * */
+
+//  애플리케이션 실행 시, 기본적인 데이터를 DB에 저장하기 위한 클래스
+//  ROLE 3가지(USER, MANAGER, ADMIN)은 항상 DB에 존재해야 함.
+//  member는  테스트 용 사용자 생성 목적.
 @Configuration
 public class UtilConfig {
   private final PasswordEncoder passwordEncoder;

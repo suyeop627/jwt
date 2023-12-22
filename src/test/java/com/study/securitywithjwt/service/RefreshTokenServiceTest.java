@@ -2,7 +2,6 @@ package com.study.securitywithjwt.service;
 
 import com.study.securitywithjwt.domain.RefreshToken;
 import com.study.securitywithjwt.repository.RefreshTokenRepository;
-import com.study.securitywithjwt.service.RefreshTokenService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -124,14 +123,11 @@ class SelectRefreshToken{
    void deleteRefreshToken_validState_callDeleteById() {
      // Given
      String token = "refreshToken_for_test";
-     given(refreshTokenRepository.findByToken(token)).willReturn(Optional.of(refreshToken));
-
      // When
-     refreshTokenService.deleteRefreshToken(token);
+     refreshTokenService.deleteRefreshTokenByToken(token);
 
      // Then
-     then(refreshTokenRepository).should(times(1)).findByToken(token);
-     then(refreshTokenRepository).should(times(1)).deleteById(refreshToken.getId());
+     then(refreshTokenRepository).should(times(1)).deleteByToken(token);
    }
 
    @Test

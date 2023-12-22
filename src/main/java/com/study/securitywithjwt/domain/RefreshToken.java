@@ -5,7 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
+//리프레시 토큰 엔티티
 @Entity
 @Table(name="refresh_token")
 @NoArgsConstructor
