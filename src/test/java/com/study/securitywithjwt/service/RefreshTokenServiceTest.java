@@ -1,8 +1,8 @@
-package com.study.securitywithjwt.service.refreshtoken.impl;
+package com.study.securitywithjwt.service;
 
 import com.study.securitywithjwt.domain.RefreshToken;
 import com.study.securitywithjwt.repository.RefreshTokenRepository;
-import com.study.securitywithjwt.service.refreshtoken.impl.RefreshTokenServiceImpl;
+import com.study.securitywithjwt.service.RefreshTokenService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -20,13 +20,13 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.times;
 
 @ExtendWith(MockitoExtension.class)
-class RefreshTokenServiceImplTest {
+class RefreshTokenServiceTest {
 
   @Mock
   private RefreshTokenRepository refreshTokenRepository;
 
   @InjectMocks
-  private RefreshTokenServiceImpl refreshTokenService;
+  private RefreshTokenService refreshTokenService;
 
   private RefreshToken refreshToken;
 

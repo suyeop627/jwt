@@ -19,6 +19,6 @@ public class MemberUserDetailsService implements UserDetailsService {
   public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
     Optional<Member> member = memberRepository.findByEmail(username);
     return new MemberUserDetails(member.orElseThrow(()->
-        new UsernameNotFoundException(username + "은 존재하지 않는 email입니다.")));
+        new UsernameNotFoundException(String.format("username : %s is nonexistent", username))));
   }
 }

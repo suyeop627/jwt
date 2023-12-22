@@ -1,15 +1,14 @@
-package com.study.securitywithjwt.service.member.impl;
+package com.study.securitywithjwt.service;
 
 import com.study.securitywithjwt.domain.Member;
 import com.study.securitywithjwt.domain.Role;
-import com.study.securitywithjwt.dto.MemberInfoDto;
+import com.study.securitywithjwt.dto.MemberDto;
 import com.study.securitywithjwt.dto.MemberSignupRequestDto;
 import com.study.securitywithjwt.dto.MemberSignupResponseDto;
 import com.study.securitywithjwt.exception.ResourceDuplicatedException;
 import com.study.securitywithjwt.exception.ResourceNotFoundException;
 import com.study.securitywithjwt.repository.MemberRepository;
 import com.study.securitywithjwt.repository.RoleRepository;
-import com.study.securitywithjwt.service.member.MemberService;
 import com.study.securitywithjwt.utils.member.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,12 +18,12 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
-public class MemberServiceImpl implements MemberService {
+public class MemberService {
   private final PasswordEncoder passwordEncoder;
   private final MemberRepository memberRepository;
   private final RoleRepository roleRepository;
 
-  @Override
+
   public MemberSignupResponseDto addMember(MemberSignupRequestDto requestDto) {
     String userEmail = requestDto.getEmail();
     //email 중복 확인
@@ -54,17 +53,18 @@ public class MemberServiceImpl implements MemberService {
         .build();
   }
 
-  @Override
-  public MemberInfoDto getMember(Integer memberId) {
+
+  public MemberDto getMember(Integer memberId) {
     Optional<Member> optionalMember = memberRepository.findById(Long.valueOf(memberId));
 
     if (optionalMember.isPresent()) {
       Member member = optionalMember.get();
 
-      return MemberInfoDto.builder()
+      return MemberDto.builder()
           .memberId(member.getMemberId())
           .email(member.getEmail())
           .name(member.getName())
+          .roles(member.getRoleNameSet())
           .build();
     }else{
       throw new ResourceNotFoundException(String.format("member id %s is not found", memberId));

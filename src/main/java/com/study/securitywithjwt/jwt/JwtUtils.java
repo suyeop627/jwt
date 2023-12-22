@@ -45,10 +45,6 @@ public class JwtUtils {
     return type.equals(ACCESS_TOKEN_TYPE) ? ACCESS_TOKEN_DURATION : REFRESH_TOKEN_DURATION;
   }
 
-
-//  public String getSubject(Claims claims) {
-//    return claims.getSubject();
-//  }
   public Claims getClaimsFromAccessToken(String token){
     return getClaims(token, ACCESS_TOKEN_TYPE);
   }
@@ -57,12 +53,9 @@ public class JwtUtils {
     return getClaims(token, REFRESH_TOKEN_TYPE);
   }
 
-
   private Claims getClaims(String token, String type) {
     return Jwts.parser().verifyWith(getSecretKey(type)).build().parseSignedClaims(token).getPayload();
-
   }
-
 
   private SecretKey getSecretKey(String type){
     String key = type.equals(ACCESS_TOKEN_TYPE) ? ACCESS_TOKEN_KEY : REFRESH_TOKEN_KEY;

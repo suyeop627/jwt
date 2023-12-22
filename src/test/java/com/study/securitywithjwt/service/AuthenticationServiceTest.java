@@ -1,4 +1,4 @@
-package com.study.securitywithjwt.service.auth.impl;
+package com.study.securitywithjwt.service;
 
 import com.study.securitywithjwt.domain.Member;
 import com.study.securitywithjwt.domain.RefreshToken;
@@ -9,8 +9,6 @@ import com.study.securitywithjwt.exception.JwtAuthenticationException;
 import com.study.securitywithjwt.exception.JwtExceptionType;
 import com.study.securitywithjwt.jwt.JwtUtils;
 import com.study.securitywithjwt.security.user.MemberUserDetails;
-import com.study.securitywithjwt.service.auth.impl.AuthenticationServiceImpl;
-import com.study.securitywithjwt.service.refreshtoken.RefreshTokenService;
 import com.study.securitywithjwt.utils.member.Gender;
 import com.study.securitywithjwt.utils.member.UserRole;
 import io.jsonwebtoken.Claims;
@@ -32,14 +30,13 @@ import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.times;
 
 @ExtendWith(MockitoExtension.class)
-class AuthenticationServiceImplTest {
+class AuthenticationServiceTest {
 
   @Mock
   AuthenticationManager authenticationManager;
@@ -51,7 +48,7 @@ class AuthenticationServiceImplTest {
   RefreshTokenService refreshTokenService;
 
   @InjectMocks //@Mock으로 지정한 클래스들 주입해서 테스트할 클래스의 인스턴스 생성해줌
-  AuthenticationServiceImpl authenticationService;
+  AuthenticationService authenticationService;
 
   @Nested
   class LoginSuccess {
@@ -123,25 +120,6 @@ class AuthenticationServiceImplTest {
     }
 
   }
-
-
-  @Test
-  void selectRefreshToken_validState_returnOptionalRefreshToken() {
-    //given
-    String refreshTokenForSelect = "refreshToken_for_test";
-    RefreshToken expectedRefreshToken = new RefreshToken();
-    expectedRefreshToken.setToken("refreshToken_for_test");
-    expectedRefreshToken.setMemberId(1L);
-    expectedRefreshToken.setId(1L);
-    given(refreshTokenService.selectRefreshTokenByTokenValue(anyString())).willReturn(Optional.of(expectedRefreshToken));
-
-    //when
-    Optional<RefreshToken> selectedRefreshToken = authenticationService.selectRefreshToken(refreshTokenForSelect);
-    //then
-    assertEquals(selectedRefreshToken, Optional.of(expectedRefreshToken));
-    then(refreshTokenService).should(times(1)).selectRefreshTokenByTokenValue(refreshTokenForSelect);
-  }
-
   @Test
   void reIssueAccessToken_validState_returnLoginResponseDto() {
     //given
@@ -159,7 +137,7 @@ class AuthenticationServiceImplTest {
     given(jwtUtils.getClaimsFromRefreshToken(anyString())).willReturn(claims);
     given(jwtUtils.issueToken(anyLong(), anyString(), anyString(), anySet(), anyString())).willReturn("re_created_accessToken");
     //when
-    LoginResponseDto loginResponseDto = authenticationService.reIssueAccessToken(refreshToken);
+    LoginResponseDto loginResponseDto = authenticationService.authenticateWithRefreshToken(refreshToken);
 
     //then
     assertThat(loginResponseDto).isNotNull()
@@ -176,7 +154,7 @@ class AuthenticationServiceImplTest {
     given(jwtUtils.getClaimsFromRefreshToken(anyString())).willThrow(ExpiredJwtException.class);
 
     //when, then
-    assertThatThrownBy(() -> authenticationService.reIssueAccessToken(expiredRefreshToken))
+    assertThatThrownBy(() -> authenticationService.authenticateWithRefreshToken(expiredRefreshToken))
         .isInstanceOf(JwtAuthenticationException.class).hasMessage(JwtExceptionType.EXPIRED_REFRESH_TOKEN.getMessage());
 
     then(refreshTokenService).should(times(1)).deleteRefreshToken(expiredRefreshToken);

@@ -38,9 +38,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
   protected void doFilterInternal(HttpServletRequest request,
                                   HttpServletResponse response,
                                   FilterChain filterChain) throws ServletException, IOException {
+
     log.info("JwtAuthenticationFilter activated");
-
-
 
     //access token이 필요 없는 경우(refresh token으로 처리되거나 token을 발급 받기 위한 요청)
     if (request.getRequestURI().equals("/auth/refresh") ||request.getRequestURI().equals("/auth/login")) {
@@ -56,13 +55,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
         return;
       }
+
       JwtAuthenticationToken unAuthenticatedToken = new JwtAuthenticationToken(token);
 
       //principal -> memberInfoDto
       JwtAuthenticationToken authenticatedToken = jwtAuthenticationProvider.authenticate(unAuthenticatedToken);
-
-
-      //authenticatedToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
       SecurityContextHolder.getContext().setAuthentication(authenticatedToken);
 
@@ -79,7 +76,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     } catch (MalformedJwtException e) {
       log.error(JwtExceptionType.INVALID_TOKEN.getMessage());
       callAuthenticationEntryPoint(request, response, JwtExceptionType.INVALID_TOKEN);
-
 
     } catch (Exception e){
       log.error("error occurred in jwtAuthenticationFilter");

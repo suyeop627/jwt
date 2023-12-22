@@ -12,6 +12,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name="member")
@@ -55,5 +56,10 @@ public class Member {
 
   public void addRole(Role role){
     roles.add(role);
+  }
+  public Set<String> getRoleNameSet(){
+    return this.roles.stream()
+        .map(role -> role.getName().name())
+        .collect(Collectors.toSet());
   }
 }

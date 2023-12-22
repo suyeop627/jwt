@@ -1,7 +1,6 @@
 package com.study.securitywithjwt.utils.annotation;
 
-import com.study.securitywithjwt.dto.MemberInfo;
-import com.study.securitywithjwt.dto.MemberInfoDto;
+import com.study.securitywithjwt.dto.MemberInfoInToken;
 import com.study.securitywithjwt.jwt.JwtAuthenticationToken;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.MethodParameter;
@@ -26,7 +25,7 @@ public class LoggedInUserInfoArgumentResolver implements HandlerMethodArgumentRe
 
   @Override
   public boolean supportsParameter(MethodParameter parameter) {
-    return parameter.hasParameterAnnotation(LoggedInUserInfo.class) && parameter.getParameterType() == MemberInfo.class;
+    return parameter.hasParameterAnnotation(LoggedInUserInfo.class) && parameter.getParameterType() == MemberInfoInToken.class;
   }
 
   @Override
@@ -38,44 +37,33 @@ public class LoggedInUserInfoArgumentResolver implements HandlerMethodArgumentRe
     Authentication authentication = null;
     try {
       authentication = SecurityContextHolder.getContext().getAuthentication();
-
       if (authentication == null) {
         throw new BadCredentialsException("LoggedInUserArgumentResolver -> authentication not found");
       }
       if (authentication instanceof AnonymousAuthenticationToken) {
         return null;
       }
-
     } catch (Exception e) {
       e.printStackTrace();
       throw new BadCredentialsException("exception occurred in LoggedInUserInfoArgumentResolver");
     }
 
-
     JwtAuthenticationToken jwtAuthenticationToken = (JwtAuthenticationToken) authentication;
-    Object details = jwtAuthenticationToken.getDetails();
-
 
     Object principal = jwtAuthenticationToken.getPrincipal();
     if (principal == null) {
       return null;
     }
 
-    MemberInfoDto memberInfoDto = (MemberInfoDto) principal;
-    MemberInfo memberInfo = MemberInfo.builder()
-        .memberId(memberInfoDto.getMemberId())
-        .email(memberInfoDto.getEmail())
-        .name(memberInfoDto.getName())
-        .build();
+    MemberInfoInToken memberInfoInToken = (MemberInfoInToken) principal;
 
     Collection<GrantedAuthority> authorities = jwtAuthenticationToken.getAuthorities();
     Set<String> roles = authorities.stream()
         .map(GrantedAuthority::getAuthority)
         .collect(Collectors.toSet());
 
-    memberInfo.setRoles(roles);
+    memberInfoInToken.setRoles(roles);
 
-
-    return memberInfo;
+    return memberInfoInToken;
   }
 }
