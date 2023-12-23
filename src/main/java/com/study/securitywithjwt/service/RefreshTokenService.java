@@ -37,6 +37,7 @@ public class RefreshTokenService {
 
 //refresh token 만료시 호출
   public void deleteRefreshTokenByToken(String token) {
+    log.info("refreshTokenRepository.deleteByToken(token)");
     refreshTokenRepository.deleteByToken(token);
   }
 

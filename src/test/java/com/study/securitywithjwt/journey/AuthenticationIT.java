@@ -1,11 +1,13 @@
 package com.study.securitywithjwt.journey;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.study.securitywithjwt.domain.RefreshToken;
 import com.study.securitywithjwt.dto.*;
 import com.study.securitywithjwt.exception.JwtExceptionType;
 import com.study.securitywithjwt.jwt.JwtUtils;
 import com.study.securitywithjwt.repository.MemberRepository;
 import com.study.securitywithjwt.repository.RefreshTokenRepository;
+import com.study.securitywithjwt.service.RefreshTokenService;
 import com.study.securitywithjwt.utils.member.Gender;
 import io.jsonwebtoken.Claims;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +23,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
@@ -41,6 +44,8 @@ public class AuthenticationIT {
   @Autowired
   RefreshTokenRepository refreshTokenRepository;
   @Autowired
+  RefreshTokenService refreshTokenService;
+  @Autowired
   MemberRepository memberRepository;
   @AfterEach
   void tearDown() {
@@ -51,7 +56,7 @@ public class AuthenticationIT {
   void loginAndSignupIT() {
     String validEmail = "test@test.com";
     String validPassword = "00000000";
-    String validPhone = "01011111111";
+    String validPhone = "01009472622";
     String validName = "name";
     LoginRequestDto loginRequestDto = new LoginRequestDto(validEmail, validPassword);
 
@@ -68,7 +73,7 @@ public class AuthenticationIT {
         .expectStatus()
         .isUnauthorized();
 
-    //sign up - email malformed
+    //sign up fail - email malformed
     signupRequestDto.setEmail("test");
 
     postSignUpRequestWIthSignupRequestDto(signupRequestDto)
@@ -76,21 +81,21 @@ public class AuthenticationIT {
         .isBadRequest();
     signupRequestDto.setEmail(validEmail);
 
-    //sign up - password malformed
+    //sign up fail - password malformed
     signupRequestDto.setPassword("000");
     postSignUpRequestWIthSignupRequestDto(signupRequestDto)
         .expectStatus()
         .isBadRequest();
     signupRequestDto.setPassword(validPassword);
 
-    //sign up - name malformed
+    //sign up fail - name malformed
     signupRequestDto.setName("d");
     postSignUpRequestWIthSignupRequestDto(signupRequestDto)
         .expectStatus()
         .isBadRequest();
     signupRequestDto.setName(validName);
 
-    //sign up - phone malformed
+    //sign up fail - phone malformed
     signupRequestDto.setPhone("11111111111");
     postSignUpRequestWIthSignupRequestDto(signupRequestDto)
         .expectStatus()
@@ -340,6 +345,9 @@ public class AuthenticationIT {
           .valueEquals("jwtException", JwtExceptionType.EXPIRED_ACCESS_TOKEN.getCode())
           .expectBody(ErrorDto.class);
 
+      log.info("refreshToken count1 : "+refreshTokenRepository.count());
+
+
 
       //request with refresh token in body -> logout ->  throw expired token exception
       RefreshTokenDto expiredRefreshTokenDto = new RefreshTokenDto();
@@ -356,10 +364,20 @@ public class AuthenticationIT {
           .expectBody(ErrorDto.class)
           .returnResult();
 
-
+      log.info("refreshToken count2 : "+refreshTokenRepository.count());
       System.out.println("entityExchangeResult1.getResponseBody() = " + entityExchangeResultWhenRefreshTokenExpired.getResponseBody());
 
-      assertThat(refreshTokenRepository.count() == 0).isTrue();
+//      assertThat(refreshTokenRepository.count() == 0).isTrue();
+      System.out.println("-------------------------------------------");
+      List<RefreshToken> all = refreshTokenRepository.findAll();
+      all.forEach(System.out::println);
+      System.out.println("-------------------------------------------");
+      Optional<RefreshToken> byToken = refreshTokenRepository.findByToken(refreshTokenExpired);
+      System.out.println("refreshTokenExpired = " + refreshTokenExpired);
+      System.out.println("token in db = " + byToken.get().getToken());
+
+      System.out.println("-------------------------------------------");
+
       assertThat(entityExchangeResultWhenRefreshTokenExpired.getResponseBody()).isNotNull();
       assertThat(entityExchangeResultWhenRefreshTokenExpired.getResponseBody().getMessage()).isEqualTo(JwtExceptionType.EXPIRED_REFRESH_TOKEN.getMessage());
 

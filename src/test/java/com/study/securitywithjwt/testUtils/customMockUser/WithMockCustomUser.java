@@ -14,4 +14,7 @@ public @interface WithMockCustomUser {
 
   String[] roles() default {"USER"};
 
+  String memberId() default "3";
+
+
 }

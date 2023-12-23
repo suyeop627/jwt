@@ -6,6 +6,7 @@ import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.util.LinkedMultiValueMap;
@@ -75,6 +76,14 @@ public class ControllerExceptionHandler {
     return new ResponseEntity<>(errorDto, HttpStatus.UNAUTHORIZED);
   }
 
+
+  @ExceptionHandler(AccessDeniedException.class)
+  public ResponseEntity<ErrorDto> handleException(AccessDeniedException e, HttpServletRequest request) {
+
+    ErrorDto errorDto = createErrorDto(request, e, HttpStatus.FORBIDDEN.value());
+
+    return new ResponseEntity<>(errorDto, HttpStatus.FORBIDDEN);
+  }
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ErrorDto> handleException(Exception e, HttpServletRequest request) {
 
@@ -91,5 +100,4 @@ public class ControllerExceptionHandler {
         .statusCode(errorCode)
         .build();
   }
-
 }

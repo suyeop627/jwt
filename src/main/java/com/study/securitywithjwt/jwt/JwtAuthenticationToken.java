@@ -1,5 +1,6 @@
 package com.study.securitywithjwt.jwt;
 
+import com.study.securitywithjwt.dto.MemberInfoInToken;
 import lombok.Setter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
@@ -36,4 +37,10 @@ public class JwtAuthenticationToken extends AbstractAuthenticationToken {
   public String getToken() {
     return token;
   }
+
+  public Long getMemberId(){
+    MemberInfoInToken principalOfAuthenticationToken = (MemberInfoInToken) principal;
+    return principalOfAuthenticationToken.getMemberId();
+  }
+
 }
