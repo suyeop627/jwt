@@ -1,9 +1,9 @@
 package com.study.securitywithjwt.config;
 
 import com.study.securitywithjwt.domain.Member;
+import com.study.securitywithjwt.domain.Role;
 import com.study.securitywithjwt.repository.MemberRepository;
 import com.study.securitywithjwt.repository.RoleRepository;
-import com.study.securitywithjwt.domain.Role;
 import com.study.securitywithjwt.utils.member.Gender;
 import com.study.securitywithjwt.utils.member.UserRole;
 import org.springframework.boot.CommandLineRunner;
@@ -26,7 +26,7 @@ public class UtilConfig {
   }
 
   @Bean
-  public CommandLineRunner initRoles(RoleRepository roleRepository) {
+  public CommandLineRunner insertRoles(RoleRepository roleRepository) {
     return args -> {
       if (roleRepository.count() == 0) {
 
@@ -44,7 +44,7 @@ public class UtilConfig {
   }
 
   @Bean
-  public CommandLineRunner initTestUser(MemberRepository memberRepository) {
+  public CommandLineRunner insertAdminUser(MemberRepository memberRepository) {
     return args -> {
       if (memberRepository.count() == 0) {
 
@@ -57,39 +57,12 @@ public class UtilConfig {
             .password(passwordEncoder.encode("00000000"))
             .regdate(LocalDateTime.now())
             .gender(Gender.MALE)
+            .phone("01011111111")
             .roles(Set.of(adminRole))
             .build();
 
-
-        Role managerRole = new Role(2L, UserRole.ROLE_MANAGER);
-
-        Member manager = Member.builder()
-            .memberId(2L)
-            .email("manager@test.com")
-            .name("manager")
-            .password(passwordEncoder.encode("00000000"))
-            .regdate(LocalDateTime.now())
-            .gender(Gender.MALE)
-            .roles(Set.of(managerRole))
-            .build();
-
-        Role userRole = new Role(3L, UserRole.ROLE_USER);
-        Member user = Member.builder()
-            .memberId(3L)
-            .email("user@test.com")
-            .name("user")
-            .password(passwordEncoder.encode("00000000"))
-            .regdate(LocalDateTime.now())
-            .gender(Gender.MALE)
-            .roles(Set.of(userRole))
-            .build();
-
         memberRepository.save(admin);
-        memberRepository.save(manager);
-        memberRepository.save(user);
       }
     };
   }
-
-
 }

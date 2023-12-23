@@ -20,7 +20,7 @@ public class WithMockCustomSecurityContextFactory implements WithSecurityContext
     MemberInfoInToken memberInfo = new MemberInfoInToken();
     memberInfo.setEmail(customUser.username());
     memberInfo.setName(customUser.name());
-
+    memberInfo.setMemberId(Long.parseLong(customUser.memberId()));
 
     Set<SimpleGrantedAuthority> authorities = Stream.of(customUser.roles())
         .map(role->"ROLE_" +role)

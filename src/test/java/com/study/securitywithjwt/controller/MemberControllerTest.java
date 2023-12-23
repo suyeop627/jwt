@@ -9,6 +9,7 @@ import com.study.securitywithjwt.exception.CustomAuthenticationEntryPoint;
 import com.study.securitywithjwt.exception.ResourceNotFoundException;
 import com.study.securitywithjwt.jwt.JwtAuthenticationProvider;
 import com.study.securitywithjwt.service.MemberService;
+import com.study.securitywithjwt.utils.annotation.LoggedInUserInfoArgumentResolver;
 import com.study.securitywithjwt.utils.member.Gender;
 import com.study.securitywithjwt.utils.member.UserRole;
 import org.hamcrest.Matchers;
@@ -59,6 +60,9 @@ class MemberControllerTest {
   JwtAuthenticationProvider jwtAuthenticationProvider;
 
   @MockBean
+  LoggedInUserInfoArgumentResolver argumentResolver;
+
+  @MockBean
   PasswordEncoder passwordEncoder;
 
   @MockBean
@@ -99,7 +103,7 @@ class MemberControllerTest {
         .andExpect(MockMvcResultMatchers.jsonPath("$.memberId").value(Matchers.is(expectedMemberSignupResponseDto.getMemberId()), Long.class))
         .andExpect(MockMvcResultMatchers.jsonPath("$.email", Matchers.is(expectedMemberSignupResponseDto.getEmail())))
         .andExpect(MockMvcResultMatchers.jsonPath("$.name", Matchers.is(expectedMemberSignupResponseDto.getName())))
-        .andExpect(MockMvcResultMatchers.jsonPath("$.regdate", Matchers.is(expectedMemberSignupResponseDto.getRegdate().toString()+":00")))
+        .andExpect(MockMvcResultMatchers.jsonPath("$.regdate", Matchers.is(expectedMemberSignupResponseDto.getRegdate().toString() + ":00")))
         .andDo(MockMvcResultHandlers.print());
 
     //value() -타입을 떠나서 같은 값을 가지는지 확인 / type을 지정해줄 수도 잇음.
@@ -246,7 +250,7 @@ class MemberControllerTest {
     }
   }
 
-//todo memberController getAllmember 테스트
+  //todo memberController getAllmember 테스트
   //todo member crud
   //todo customer crud
   @Test
@@ -276,6 +280,7 @@ class MemberControllerTest {
         .andExpect(MockMvcResultMatchers.jsonPath("$.email", Matchers.is(email)));
 
   }
+
   @Test
   public void getMember_memberNonexistent_returnMemberDto() throws Exception {
     //given
@@ -286,8 +291,9 @@ class MemberControllerTest {
 
     //then
     response.andExpect(MockMvcResultMatchers.status().isNotFound());
-    assertThatThrownBy(()->memberService.getMember(memberId)).isInstanceOf(ResourceNotFoundException.class);
+    assertThatThrownBy(() -> memberService.getMember(memberId)).isInstanceOf(ResourceNotFoundException.class);
   }
+
   @Test
   public void getAllMembers_validState_returnPageOfMemberDto() throws Exception {
     //given
@@ -309,7 +315,7 @@ class MemberControllerTest {
 
     }
     PageRequest pageRequest = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Order.desc("memberId")));
-    Page<MemberDto> memberDtoPage = new PageImpl<>(pageContents,pageRequest,totalElement);
+    Page<MemberDto> memberDtoPage = new PageImpl<>(pageContents, pageRequest, totalElement);
 
     given(memberService.getAllMembers(anyInt(), anyInt())).willReturn(memberDtoPage);
 

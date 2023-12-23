@@ -17,6 +17,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
 import java.util.List;
@@ -82,7 +83,7 @@ public class AuthenticationService {
     refreshTokenService.insertRefreshToken(refreshTokenOfLoginMember);
   }
 
-
+  @Transactional
   public LoginResponseDto authenticateWithRefreshToken(String refreshToken) {
 
     Claims claimsFromRefreshToken = getClaimsRefreshTokenOrThrowException(refreshToken);
@@ -93,8 +94,13 @@ public class AuthenticationService {
     List<String> roleFromClaims = (List<String>) claimsFromRefreshToken.get("roles");
 
 
-    MemberInfoInToken memberInfoInToken = MemberInfoInToken.builder()
-        .memberId(memberId).name(name).email(subject).roles(new HashSet<>(roleFromClaims)).build();
+    MemberInfoInToken memberInfoInToken =
+        MemberInfoInToken.builder()
+            .memberId(memberId)
+            .name(name)
+            .email(subject)
+            .roles(new HashSet<>(roleFromClaims))
+            .build();
 
 
     String accessToken = jwtUtils.issueToken(memberInfoInToken, TYPE_ACCESS);
@@ -109,19 +115,19 @@ public class AuthenticationService {
 
   private Claims getClaimsRefreshTokenOrThrowException(String refreshToken) {
     try {
-     return jwtUtils.getClaimsFromRefreshToken(refreshToken);
+      return jwtUtils.getClaimsFromRefreshToken(refreshToken);
 
     } catch (ExpiredJwtException e) {
       //전달받은 토큰의 유효기간이 지난 경우, 기존 토큰 삭제 및 재인증 요청 -> exception handler
-      jwtAuthenticationException(JwtExceptionType.EXPIRED_REFRESH_TOKEN, refreshToken, e);
+      deleteRefreshTokenAndThrow(JwtExceptionType.EXPIRED_REFRESH_TOKEN, refreshToken, e);
     } catch (Exception e) {
       //전달받은 토큰을 parsing 할때 기타 예외가 발생한 경우 기존 토큰 삭제 및 예외 처리
-      jwtAuthenticationException(JwtExceptionType.UNKNOWN_ERROR, refreshToken, e);
+      deleteRefreshTokenAndThrow(JwtExceptionType.UNKNOWN_ERROR, refreshToken, e);
     }
     return null;
   }
 
-  private void jwtAuthenticationException(JwtExceptionType jwtExceptionType, String refreshToken, Exception e) {
+  private void deleteRefreshTokenAndThrow(JwtExceptionType jwtExceptionType, String refreshToken, Exception e) {
     log.error("Thrown Exception by getClaimsRefreshTokenOrThrowException(), {}", jwtExceptionType);
     e.printStackTrace();
     refreshTokenService.deleteRefreshTokenByToken(refreshToken);

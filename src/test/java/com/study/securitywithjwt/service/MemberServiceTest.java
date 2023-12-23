@@ -88,7 +88,7 @@ class MemberServiceTest {
     }
 
     @Test
-    void testAddMember_validState_returnMemberSignupResponseDto() {
+    void addMember_validState_returnMemberSignupResponseDto() {
       //given
       MemberSignupRequestDto requestDto = new MemberSignupRequestDto();
       requestDto.setEmail("test@Email.com");

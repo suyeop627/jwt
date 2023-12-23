@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -19,7 +20,8 @@ import org.springframework.web.cors.CorsUtils;
  * Security filter chain 설정 클래스
  */
 @Configuration
-@EnableWebSecurity
+@EnableWebSecurity(debug = true)
+@EnableMethodSecurity
 public class SecurityFilterChainConfig {
   private final JwtAuthenticationFilter jwtAuthenticationFilter;
   private final JwtAuthenticationProvider jwtAuthenticationProvider;
@@ -53,10 +55,8 @@ public class SecurityFilterChainConfig {
                 .requestMatchers(CorsUtils::isPreFlightRequest).permitAll()
                 .requestMatchers(HttpMethod.POST, "/members", "/auth/login", "/auth/refresh")
                 .permitAll()
-                .requestMatchers(HttpMethod.GET, "/members", "/api/customers")
+                .requestMatchers(HttpMethod.GET, "/members")
                 .authenticated()
-                .requestMatchers("/api/customers")
-                .hasAnyRole("ADMIN", "MANAGER")
                 .anyRequest()
                 .authenticated()
 

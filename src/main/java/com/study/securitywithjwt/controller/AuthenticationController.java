@@ -5,7 +5,7 @@ import com.study.securitywithjwt.dto.*;
 import com.study.securitywithjwt.exception.ResourceNotFoundException;
 import com.study.securitywithjwt.service.AuthenticationService;
 import com.study.securitywithjwt.service.RefreshTokenService;
-import com.study.securitywithjwt.utils.RequestValidationUtils;
+import com.study.securitywithjwt.utils.ControllerUtils;
 import com.study.securitywithjwt.utils.annotation.LoggedInUserInfo;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -37,7 +37,7 @@ public class AuthenticationController {
   @PostMapping("login")
   public ResponseEntity<?> login(@RequestBody @Valid LoginRequestDto loginRequestDto, BindingResult bindingResult, HttpServletRequest request) {
 
-    ResponseEntity<Set<ErrorDto>> errorDtoSet = RequestValidationUtils.getErrorResponseFromBindingResult(bindingResult, request);
+    ResponseEntity<Set<ErrorDto>> errorDtoSet = ControllerUtils.getErrorResponseFromBindingResult(bindingResult, request);
     if (errorDtoSet != null) return errorDtoSet;
 
     log.info("Attempting authentication for user {}, password {}", loginRequestDto.getEmail(), loginRequestDto.getPassword());
