@@ -4,6 +4,7 @@ import com.study.securitywithjwt.exception.JwtAuthenticationException;
 import com.study.securitywithjwt.exception.JwtExceptionType;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.security.SignatureException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -43,7 +44,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     //access token이 필요 없는 경우(refresh token으로 처리되거나 token을 발급 받기 위한 요청)
     if (request.getRequestURI().equals("/auth/refresh") ||request.getRequestURI().equals("/auth/login")) {
-      log.info("JwtAuthenticationFilter passed, {} ", request.getRequestURI());
+      log.info("JwtAuthenticationFilter passed, request uri: {} ", request.getRequestURI());
       filterChain.doFilter(request, response);
       return;
     }
@@ -51,15 +52,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     try {
       String token = getTokenFromRequest(request);
       if(token==null){
-        log.info("token is null, call filterChain.doFilter()");
+        log.info("Request header does not contains token, proceeding remaining filters");
         filterChain.doFilter(request, response);
         return;
       }
 
       JwtAuthenticationToken unAuthenticatedToken = new JwtAuthenticationToken(token);
 
+      log.info("Attempting to obtain Authentication by JwtAuthenticationProvider");
       //principal -> memberInfoDto
       JwtAuthenticationToken authenticatedToken = jwtAuthenticationProvider.authenticate(unAuthenticatedToken);
+      log.info("Authentication for member(memberId: {}) generated. Authentication type: {}, principal: {}",
+          authenticatedToken.getMemberId(),authenticatedToken.getClass(), authenticatedToken.getPrincipal());
 
       SecurityContextHolder.getContext().setAuthentication(authenticatedToken);
 
@@ -74,13 +78,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     } catch (MalformedJwtException e) {
       callAuthenticationEntryPoint(request, response, JwtExceptionType.INVALID_TOKEN);
 
-    } catch (Exception e){
-      log.error("error occurred in jwtAuthenticationFilter");
-      log.error("exception message : {}", e.getMessage());
-      e.printStackTrace();
+    } catch (SignatureException e){
+      callAuthenticationEntryPoint(request, response, JwtExceptionType.INVALID_SIGNATURE);
 
-      request.setAttribute("exception", JwtExceptionType.UNKNOWN_ERROR.getCode());
-      throw new JwtAuthenticationException("throw malformed token exception", JwtExceptionType.UNKNOWN_ERROR);
+    } catch (Exception e){
+      log.error("Exception occurred in jwtAuthenticationFilter, message: {}", e.getMessage());
+      e.printStackTrace();
+      callAuthenticationEntryPoint(request, response, JwtExceptionType.UNKNOWN_ERROR);
     }
 
   }
@@ -92,7 +96,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     return authorizationHeader.split(" ")[1];
   }
   private void callAuthenticationEntryPoint(HttpServletRequest request, HttpServletResponse response, JwtExceptionType jwtExceptionType) throws IOException, ServletException {
-    log.error("exception {} thrown. {}",jwtExceptionType.getCode(), jwtExceptionType.getMessage());
+    log.error(jwtExceptionType.getMessage());
     JwtAuthenticationException exception = new JwtAuthenticationException(jwtExceptionType);
     authenticationEntryPoint.commence(request, response,exception);
   }

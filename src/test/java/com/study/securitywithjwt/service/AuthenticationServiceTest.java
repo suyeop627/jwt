@@ -38,16 +38,12 @@ import static org.mockito.Mockito.times;
 
 @ExtendWith(MockitoExtension.class)
 class AuthenticationServiceTest {
-
   @Mock
   AuthenticationManager authenticationManager;
-
   @Mock
   JwtUtils jwtUtils;
-
   @Mock
   RefreshTokenService refreshTokenService;
-
   @InjectMocks //@Mock으로 지정한 클래스들 주입해서 테스트할 클래스의 인스턴스 생성해줌
   AuthenticationService authenticationService;
 
@@ -86,8 +82,10 @@ class AuthenticationServiceTest {
       refreshToken.setId(1L);
       given(refreshTokenService.selectRefreshTokenByMemberEmail(anyString())).willReturn(Optional.of(refreshToken));
 
+      //when
       LoginResponseDto loginResponseDto = authenticationService.login(requestDto);
 
+      //then
       assertThat(loginResponseDto).isNotNull()
           .hasFieldOrPropertyWithValue("email", requestDto.getEmail())
           .hasFieldOrPropertyWithValue("name", member.getName())
@@ -104,8 +102,8 @@ class AuthenticationServiceTest {
       //given
       given(authenticationManager.authenticate(any())).willReturn(authentication);
       given(jwtUtils.issueToken(any(MemberInfoInToken.class), anyString())).willReturn("createdAccessTokenForTest", "createdRefreshTokenForTest");
-
       given(refreshTokenService.selectRefreshTokenByMemberEmail(anyString())).willReturn(Optional.of(new RefreshToken()));
+
       //when
       LoginResponseDto loginResponseDto = authenticationService.login(requestDto);
       //then
@@ -134,9 +132,9 @@ class AuthenticationServiceTest {
             "memberId", 1L))
         .build();
 
-    System.out.println("claims = " + claims);
     given(jwtUtils.getClaimsFromRefreshToken(anyString())).willReturn(claims);
     given(jwtUtils.issueToken(any(MemberInfoInToken.class), anyString())).willReturn("re_created_accessToken");
+
     //when
     LoginResponseDto loginResponseDto = authenticationService.authenticateWithRefreshToken(refreshToken);
 

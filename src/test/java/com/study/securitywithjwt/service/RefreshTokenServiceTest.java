@@ -20,15 +20,11 @@ import static org.mockito.Mockito.times;
 
 @ExtendWith(MockitoExtension.class)
 class RefreshTokenServiceTest {
-
   @Mock
   private RefreshTokenRepository refreshTokenRepository;
-
   @InjectMocks
   private RefreshTokenService refreshTokenService;
-
   private RefreshToken refreshToken;
-
   @BeforeEach
   void setUp() {
     refreshToken = new RefreshToken();

@@ -28,9 +28,10 @@ public class ControllerUtils {
     return null;
   }
   public static URI getCreatedUri(MemberSignupResponseDto memberSignupResponseDto) {
-    return ServletUriComponentsBuilder.fromCurrentRequest()
+    URI createdUri = ServletUriComponentsBuilder.fromCurrentRequest()
         .path("/{id}")
         .buildAndExpand(memberSignupResponseDto.getMemberId())
         .toUri();
+    return createdUri;
   }
 }

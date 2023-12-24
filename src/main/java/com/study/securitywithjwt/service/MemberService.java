@@ -105,9 +105,9 @@ public class MemberService {
     member.setEmail(updateRequestDto.getEmail());
     member.setPhone(updateRequestDto.getPhone());
     member.setName(updateRequestDto.getName());
-    memberRepository.save(member);
+    Member updatedMember = memberRepository.save(member);
 
-    return memberDtoMapper.apply(member);
+    return memberDtoMapper.apply(updatedMember);
   }
 
   private Member findMemberByIdOrThrow(Long memberId) {

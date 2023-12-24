@@ -11,8 +11,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
@@ -36,47 +36,45 @@ public class AuthenticationController {
 //로그인 실패시 path, message, code, localDateTime을 담은 errorDto 반환
   @PostMapping("login")
   public ResponseEntity<?> login(@RequestBody @Valid LoginRequestDto loginRequestDto, BindingResult bindingResult, HttpServletRequest request) {
-
     ResponseEntity<Set<ErrorDto>> errorDtoSet = ControllerUtils.getErrorResponseFromBindingResult(bindingResult, request);
     if (errorDtoSet != null) return errorDtoSet;
 
-    log.info("Attempting authentication for user {}, password {}", loginRequestDto.getEmail(), loginRequestDto.getPassword());
-
+    log.info("Attempting authentication for the user with email. Email: {}", loginRequestDto.getEmail());
     LoginResponseDto response = authenticationService.login(loginRequestDto);
-
+    log.info("Authentication success for the user with email. Email: {}", loginRequestDto.getEmail());
     return ResponseEntity.ok().body(response);
   }
 
-  //access token 재 발급 end point
+  //access token 재 발급
   //refresh token을 기반으로, 회원 기본 정보 확인 후, access token 발급
   //refresh token이 만료된 경우, 응답 헤더에 JwtException: REFRESH_TOKEN_EXPIRED 를 추가해서 응답.
   @PostMapping("/refresh")
   public ResponseEntity<?> reIssueAccessToken(@RequestBody RefreshTokenDto refreshTokenDto) {
 
-    log.info("Attempting renew access token with refresh token {}", refreshTokenDto.getToken());
-
+    log.info("Attempting to renew access token using the refresh token. Token: {}", refreshTokenDto.getToken());
     //received refresh token is nonexistent in db, throw exception
     RefreshToken refreshToken = refreshTokenService.selectRefreshTokenByTokenValue(refreshTokenDto.getToken())
-        .orElseThrow(() -> new ResourceNotFoundException("token doesn't exist in database"));
+        .orElseThrow(() -> new ResourceNotFoundException(
+           String.format("Token does not exist in the database. Token: %s",refreshTokenDto.getToken())));
 
     //longin response Dto with reissued access token
     LoginResponseDto response = authenticationService.authenticateWithRefreshToken(refreshToken.getToken());
 
-    log.info("member : {} , access token changed", response.getEmail());
+    log.info("Member: {} , Access token changed", response.getEmail());
+    log.info("New access token: {}", response.getAccessToken());
     return ResponseEntity.ok().body(response);
   }
 
   //로그 아웃
   //db에 저장된 refresh token 삭제
   @DeleteMapping("/logout")
-  @Transactional
-  public ResponseEntity logout(@LoggedInUserInfo MemberInfoInToken loggedInMember) {
+  public ResponseEntity<Void> logout(@LoggedInUserInfo MemberInfoInToken loggedInMember) {
     if (loggedInMember == null) {
-      log.info("logout called from not logged in user");
+      log.info("Logout called from a not logged-in user.");
       return ResponseEntity.badRequest().build();
     }
-    log.info("logout called, memberId : {}", loggedInMember.getMemberId());
+    log.info("Logout called. Member ID: {}", loggedInMember.getMemberId());
     refreshTokenService.deleteRefreshTokenByMemberId(loggedInMember.getMemberId());
-    return ResponseEntity.ok().build();
+    return new ResponseEntity<>(HttpStatus.OK);
   }
 }

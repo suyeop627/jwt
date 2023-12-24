@@ -32,15 +32,13 @@ class MemberRepositoryTest {
   RoleRepository roleRepository;
   @Autowired
   MemberRepository memberRepository;
-  Member member1;
-  Member member2;
-
-
+  Member savedMember1;
+  Member savedMember2;
   @Nested
   class selectMember {
     @BeforeEach
     void setUp() {
-      member1 = Member.builder()
+      savedMember1 = Member.builder()
           .email("member1@test.com")
           .gender(Gender.MALE)
           .name("member1")
@@ -49,7 +47,7 @@ class MemberRepositoryTest {
           .phone("01011111111")
           .build();
 
-      member2 = Member.builder()
+      savedMember2 = Member.builder()
           .email("member2@test.com")
           .gender(Gender.FEMALE)
           .name("member2")
@@ -59,8 +57,8 @@ class MemberRepositoryTest {
           .build();
 
 
-      memberRepository.save(member1);
-      memberRepository.save(member2);
+      memberRepository.save(savedMember1);
+      memberRepository.save(savedMember2);
       Role role = new Role(1L, UserRole.ROLE_ADMIN);
       roleRepository.save(role);
     }
@@ -73,37 +71,56 @@ class MemberRepositoryTest {
 
     @Test
     void findByEmail_validState_returnOptionalMember() {
-      Optional<Member> foundMember = memberRepository.findByEmail("member1@test.com");
+      //given
+      String savedMemberEmail = "member1@test.com";
+      //when
+      Optional<Member> foundMember = memberRepository.findByEmail(savedMemberEmail);
+      //then
       assertThat(foundMember.isPresent()).isTrue();
-      assertThat((foundMember.get())).isEqualTo(member1);
+      assertThat((foundMember.get())).isEqualTo(savedMember1);
     }
 
 
     @Test
     void existsByEmail_nonexistentEmail_returnFalse() {
-      boolean existsMemberByEmail = memberRepository.existsByEmail("member3@test.com");
+      //given
+      String unsavedMemberEmail = "member3@test.com";
+      //when
+      boolean existsMemberByEmail = memberRepository.existsByEmail(unsavedMemberEmail);
+      //then
       assertThat(existsMemberByEmail).isFalse();
     }
 
     @Test
     void existsByEmail_existEmail_returnTrue() {
-      boolean existsMemberByEmail = memberRepository.existsByEmail("member1@test.com");
+      //given
+      String existEmail = "member1@test.com";
+      //when
+      boolean existsMemberByEmail = memberRepository.existsByEmail(existEmail);
+      //then
       assertThat(existsMemberByEmail).isTrue();
     }
 
 
     @Test
-    void existsByPhone_nonexistentEmail_returnFalse() {
-      boolean existsMemberByEmail = memberRepository.existsByPhone("010123123123");
+    void existsByPhone_nonexistentPhone_returnFalse() {
+      //given
+      String nonexistentPhone = "010123123123";
+      //when
+      boolean existsMemberByEmail = memberRepository.existsByPhone(nonexistentPhone);
+      //then
       assertThat(existsMemberByEmail).isFalse();
     }
 
     @Test
-    void existsByPhone_existEmail_returnTrue() {
-      boolean existsMemberByEmail = memberRepository.existsByPhone("01011111111");
+    void existsByPhone_existPhone_returnTrue() {
+      //given
+      String existPhone = "01011111111";
+      //when
+      boolean existsMemberByEmail = memberRepository.existsByPhone(existPhone);
+      //then
       assertThat(existsMemberByEmail).isTrue();
     }
-
   }
 
 
@@ -142,10 +159,12 @@ class MemberRepositoryTest {
       }
 
       PageRequest pageRequest = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Order.desc("memberId")));
+
       //when
       Page<Member> memberPages = memberRepository.findAll(pageRequest);
       System.out.printf("totalElement : %s, pageSize : %s, pageNumber : %s%n%n", totalElement, pageSize, pageNumber);
       memberPages.stream().forEach(member -> System.out.println("member = " + member));
+
       //then
       assertThat(memberPages.getTotalPages()).isEqualTo((int) Math.ceil((double) totalElement / pageSize));
       assertThat(memberPages.getSize()).isEqualTo(pageSize);
@@ -154,7 +173,6 @@ class MemberRepositoryTest {
       //total 30, pageNumber 2, size 10 -> 30~21 / 20~11 / 10 ~1 -> memberId  = firstMemberID = total-(pageNumber*pageSize)
       //total 5 pageNumber 3, size 2 ->  5~4 / 3~2 / 1/
       int memberNumberOfTopOfFirstPage = (totalElement) - ( pageSize * pageNumber);
-
 
       assertThat(memberPages.getContent().get(0).getName()).isEqualTo("name"+(memberNumberOfTopOfFirstPage));
     }

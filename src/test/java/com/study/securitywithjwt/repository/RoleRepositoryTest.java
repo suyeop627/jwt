@@ -34,4 +34,5 @@ class RoleRepositoryTest {
     Assertions.assertThat(optionalRole.isPresent()).isTrue();
     Assertions.assertThat(optionalRole.get().getName()).isEqualTo(UserRole.ROLE_USER);
   }
+
 }

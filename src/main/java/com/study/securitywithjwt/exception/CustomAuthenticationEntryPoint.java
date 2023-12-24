@@ -2,10 +2,11 @@ package com.study.securitywithjwt.exception;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.study.securitywithjwt.dto.ErrorDto;
-import jakarta.servlet.ServletException;
+import com.study.securitywithjwt.utils.LoggingUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
@@ -19,55 +20,36 @@ import java.time.LocalDateTime;
 @Slf4j
 public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint {
   private final ObjectMapper objectMapper;
+  @Value("${jwt.exception.response.header}")
+  private String JWT_EXCEPTION_HEADER;
+
 
   public CustomAuthenticationEntryPoint(ObjectMapper objectMapper) {
     this.objectMapper = objectMapper;
   }
 
-
-
-
   @Override
-  public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
+  public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException {
     log.info("entry point access ");
-    if (authException instanceof JwtAuthenticationException exception) {
+    if (authException instanceof JwtAuthenticationException jwtException) {
       //String exception = (String) request.getAttribute("exception");
-      //if(exception!=null)
-      log.error("authentication entry point");
-      if (exception.getJwtExceptionType() == JwtExceptionType.EXPIRED_ACCESS_TOKEN) {
-        log.error("token expired");
-        setResponse(request, response, exception);
-      } else if (exception.getJwtExceptionType() == JwtExceptionType.INVALID_TOKEN) {
-        log.error("token invalid");
-        setResponse(request, response, exception);
-      } else if (exception.getJwtExceptionType() == JwtExceptionType.TOKEN_NOT_FOUND) {
-        log.error("token not found");
-        setResponse(request, response, exception);
-      } else {
-        log.error("unknown error regarding jwt occurred");
-        setResponse(request, response, exception);
-      }
-    } else {
-      setResponse(request, response, authException);
+      //if(exception!=null) -> filter에서 entry point 주입받아 바로 호출하도록 처리함.
+      //수정 전 : request.getAttribute()로 예외 종류 판별 후 if - elsif로 분류
+      //수정 후 : jwtAuthenticationException 생성 후, getJwtExceptionType() 메서드로 일괄 처리
+      log.error(jwtException.getJwtExceptionType().getMessage());
+      response.setHeader(JWT_EXCEPTION_HEADER, jwtException.getJwtExceptionType().getCode());
     }
-
-  }
-
-  private void setResponse(HttpServletRequest request, HttpServletResponse response, Exception exception) throws IOException {
-
-    if (exception instanceof JwtAuthenticationException jwtException) {
-      response.setHeader("JwtException", jwtException.getJwtExceptionType().getCode());
-    }
-
     response.setContentType(MediaType.APPLICATION_JSON_VALUE);
     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 
     ErrorDto errorDto = ErrorDto.builder()
         .localDateTime(LocalDateTime.now())
-        .message(exception.getMessage())
+        .message(authException.getMessage())
         .path(request.getRequestURI())
         .statusCode(HttpServletResponse.SC_UNAUTHORIZED)
         .build();
+
+    LoggingUtils.loggingErrorDto(errorDto);
 
     try (PrintWriter writer = response.getWriter()) {
       objectMapper.writeValue(writer, errorDto);

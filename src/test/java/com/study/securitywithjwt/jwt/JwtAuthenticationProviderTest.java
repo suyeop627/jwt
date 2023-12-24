@@ -60,9 +60,7 @@ class JwtAuthenticationProviderTest {
 
   @Test
   void supports_JwtAuthenticationToken_returnTrue() {
-    //given
-
-    //when
+    //given, when
     boolean isSupported = jwtAuthenticationProvider.supports(JwtAuthenticationToken.class);
     //then
     assertThat(isSupported).isTrue();
@@ -70,9 +68,7 @@ class JwtAuthenticationProviderTest {
 
   @Test
   void supports_UsernamePasswordAuthenticationToken_returnFalse() {
-    //given
-
-    //when
+    //given, when
     boolean isSupported = jwtAuthenticationProvider.supports(UsernamePasswordAuthenticationToken.class);
     //then
     assertThat(isSupported).isFalse();

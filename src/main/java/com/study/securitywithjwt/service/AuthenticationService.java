@@ -19,6 +19,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 
@@ -40,8 +41,9 @@ public class AuthenticationService {
     deleteRefreshTokenIfExists(loginRequestDto);
 
     String accessToken = jwtUtils.issueToken(memberInfoInToken, TYPE_ACCESS);
+    log.info("Access token for member(memberId: {} generated. Access token : {}", memberInfoInToken.getMemberId(), accessToken);
     String refreshToken = jwtUtils.issueToken(memberInfoInToken, TYPE_REFRESH);
-
+    log.info("Refresh token for member(memberId: {} generated. Refresh token : {}", memberInfoInToken.getMemberId(), refreshToken);
     saveRefreshTokenOfLoginMember(memberInfoInToken.getMemberId(), refreshToken);
 
     return LoginResponseDto.builder()
@@ -60,9 +62,11 @@ public class AuthenticationService {
         new UsernamePasswordAuthenticationToken(
             loginRequestDto.getEmail(), loginRequestDto.getPassword())
     );
+    log.info("Authentication successfully obtained. Authentication type: {}, principal: {}", authentication.getClass(), authentication.getPrincipal());
     //principal of Authentication = MemberUserDetails member
     Member member = ((MemberUserDetails) authentication.getPrincipal()).getMember();
-
+    log.info("Authentication for member(memberId: {}) generated. Authentication type: {}, principal: {}",
+        member.getMemberId(),authentication.getClass(), authentication.getPrincipal());
     return MemberInfoInToken.builder()
         .memberId(member.getMemberId())
         .roles(member.getRoleNameSet())
@@ -79,7 +83,12 @@ public class AuthenticationService {
 
 
   private void saveRefreshTokenOfLoginMember(Long memberId, String refreshToken) {
-    RefreshToken refreshTokenOfLoginMember = RefreshToken.builder().token(refreshToken).memberId(memberId).build();
+    RefreshToken refreshTokenOfLoginMember =
+        RefreshToken.builder()
+            .token(refreshToken)
+            .memberId(memberId)
+            .expiredAt(LocalDateTime.now())
+            .build();
     refreshTokenService.insertRefreshToken(refreshTokenOfLoginMember);
   }
 
@@ -93,7 +102,6 @@ public class AuthenticationService {
     Long memberId = claimsFromRefreshToken.get("memberId", Long.class);
     List<String> roleFromClaims = (List<String>) claimsFromRefreshToken.get("roles");
 
-
     MemberInfoInToken memberInfoInToken =
         MemberInfoInToken.builder()
             .memberId(memberId)
@@ -105,6 +113,7 @@ public class AuthenticationService {
 
     String accessToken = jwtUtils.issueToken(memberInfoInToken, TYPE_ACCESS);
 
+    log.info("Access token for member(memberId: {} re-generated from Refresh token. Access token : {}", memberInfoInToken.getMemberId(), accessToken);
     return LoginResponseDto.builder()
         .name(name)
         .email(subject)

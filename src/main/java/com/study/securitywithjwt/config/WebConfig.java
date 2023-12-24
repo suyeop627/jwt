@@ -3,6 +3,7 @@ package com.study.securitywithjwt.config;
 import com.study.securitywithjwt.utils.annotation.LoggedInUserInfoArgumentResolver;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -13,6 +14,7 @@ import java.util.List;
 
 //Cors 설정 및 argumentResolver를 추가하는 설정 클래스
 @Configuration
+@EnableScheduling
 public class WebConfig implements WebMvcConfigurer {
   private final LoggedInUserInfoArgumentResolver loggedInUserInfoArgumentResolver;
 

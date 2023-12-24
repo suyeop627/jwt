@@ -11,16 +11,17 @@ import com.study.securitywithjwt.service.AuthenticationService;
 import com.study.securitywithjwt.service.RefreshTokenService;
 import com.study.securitywithjwt.utils.annotation.LoggedInUserInfoArgumentResolver;
 import org.hamcrest.Matchers;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
@@ -42,6 +43,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @ExtendWith(MockitoExtension.class)
 @WebMvcTest(AuthenticationController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@TestPropertySource("classpath:application-test.properties")
+@DisplayNameGeneration(DisplayNameGenerator.IndicativeSentences.class)
 public class AuthenticationControllerTest {
   @Autowired
   MockMvc mockMvc;
@@ -56,27 +59,18 @@ public class AuthenticationControllerTest {
   private ObjectMapper objectMapper;
   @MockBean
   CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
-
+  @Value("${jwt.exception.response.header}")
+  private String JWT_EXCEPTION_HEADER;
   @MockBean
   private LoggedInUserInfoArgumentResolver argumentResolver;
 
   @Test
   public void login_validState_returnLoginResponseDto() throws Exception {
-    // Given
+    // given
     LoginRequestDto loginRequestDto = new LoginRequestDto("test@example.com", "password");
-    LoginResponseDto loginResponseDto = new LoginResponseDto("accessToken", "refreshToken", loginRequestDto.getEmail(), "testName");
-    given(authenticationService.login(loginRequestDto)).willReturn(loginResponseDto);
-   /* willAnswer - 전달받은 parameter로 특별한 처리 후 반환할 경우 사용
-    ex -> BDDMockito.given(mockService.someMethod(BDDMockito.anyString(), BDDMockito.anyInt()))
-        .willAnswer(invocation -> {
-        String arg1 = invocation.getArgument(0);
-            int arg2 = invocation.getArgument(1);
+    LoginResponseDto expectedLoginResponse = new LoginResponseDto("accessToken", "refreshToken", loginRequestDto.getEmail(), "testName");
 
-            // 여기에서 arg1, arg2를 사용하여 특별한 동작이나 로직을 정의할 수 있음
-
-            return "Mocked Value";
-        });
-  */
+    given(authenticationService.login(loginRequestDto)).willReturn(expectedLoginResponse);
 
     // When
     ResultActions response = mockMvc.perform(post("/auth/login")
@@ -84,10 +78,10 @@ public class AuthenticationControllerTest {
         .content(objectMapper.writeValueAsString(loginRequestDto)));
     //then
     response.andExpect(MockMvcResultMatchers.status().isOk())
-        .andExpect(MockMvcResultMatchers.jsonPath("$.accessToken", Matchers.is(loginResponseDto.getAccessToken())))
-        .andExpect(MockMvcResultMatchers.jsonPath("$.refreshToken", Matchers.is(loginResponseDto.getRefreshToken())))
-        .andExpect(MockMvcResultMatchers.jsonPath("$.email", Matchers.is(loginResponseDto.getEmail())))
-        .andExpect(MockMvcResultMatchers.jsonPath("$.name", Matchers.is(loginResponseDto.getName())))
+        .andExpect(MockMvcResultMatchers.jsonPath("$.accessToken", Matchers.is(expectedLoginResponse.getAccessToken())))
+        .andExpect(MockMvcResultMatchers.jsonPath("$.refreshToken", Matchers.is(expectedLoginResponse.getRefreshToken())))
+        .andExpect(MockMvcResultMatchers.jsonPath("$.email", Matchers.is(expectedLoginResponse.getEmail())))
+        .andExpect(MockMvcResultMatchers.jsonPath("$.name", Matchers.is(expectedLoginResponse.getName())))
         .andDo(MockMvcResultHandlers.print());
   }
 
@@ -95,16 +89,17 @@ public class AuthenticationControllerTest {
   class LoginValidationTest {
     @Test
     public void login_invalidEmailAndInvalidPassword_return400ErrorDtos() throws Exception {
-      // Given
-      LoginRequestDto loginRequestDto = new LoginRequestDto("2", "1");
+      // given
+      String invalidEmail = "EMAIL";
+      String invalidPassword = "pwd";
+      LoginRequestDto loginRequestDto = new LoginRequestDto(invalidEmail, invalidPassword);
       LoginResponseDto loginResponseDto = new LoginResponseDto("accessToken", "refreshToken", loginRequestDto.getEmail(), "testName");
       given(authenticationService.login(loginRequestDto)).willReturn(loginResponseDto);
 
-      List<ErrorDto> expectedErrors = Arrays.asList(
+      List<ErrorDto> expectedErrorDto = Arrays.asList(
           new ErrorDto("/auth/login", "must be a well-formed email address", 400, LocalDateTime.now()),
           new ErrorDto("/auth/login", "password size must be between 8 and 16", 400, LocalDateTime.now())
       );
-
 
       // When
       ResultActions response = mockMvc.perform(post("/auth/login")
@@ -112,54 +107,56 @@ public class AuthenticationControllerTest {
           .content(objectMapper.writeValueAsString(loginRequestDto)));
       //then
       response.andExpect(MockMvcResultMatchers.status().isBadRequest())
-          .andExpect(MockMvcResultMatchers.jsonPath("$", Matchers.hasSize(expectedErrors.size())))
-          .andExpect(MockMvcResultMatchers.jsonPath("$[*].path", Matchers.containsInAnyOrder(expectedErrors.stream().map(ErrorDto::getPath).toArray())))
-          .andExpect(MockMvcResultMatchers.jsonPath("$[*].message", Matchers.containsInAnyOrder(expectedErrors.stream().map(ErrorDto::getMessage).toArray())))
-          .andExpect(MockMvcResultMatchers.jsonPath("$[*].statusCode", Matchers.containsInAnyOrder(expectedErrors.stream().map(ErrorDto::getStatusCode).toArray())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$", Matchers.hasSize(expectedErrorDto.size())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$[*].path", Matchers.containsInAnyOrder(expectedErrorDto.stream().map(ErrorDto::getPath).toArray())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$[*].message", Matchers.containsInAnyOrder(expectedErrorDto.stream().map(ErrorDto::getMessage).toArray())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$[*].statusCode", Matchers.containsInAnyOrder(expectedErrorDto.stream().map(ErrorDto::getStatusCode).toArray())))
           .andDo(MockMvcResultHandlers.print());
     }
 
     @Test
     public void login_invalidEmail_return400ErrorDto() throws Exception {
-      // Given
-      LoginRequestDto loginRequestDto = new LoginRequestDto("2", "00000000");
+      // given
+      String invalidEmail = "2";
+      LoginRequestDto loginRequestDto = new LoginRequestDto(invalidEmail, "00000000");
       LoginResponseDto loginResponseDto = new LoginResponseDto("accessToken", "refreshToken", loginRequestDto.getEmail(), "testName");
+
       given(authenticationService.login(loginRequestDto)).willReturn(loginResponseDto);
 
+      ErrorDto expectedErrorDto = new ErrorDto("/auth/login", "must be a well-formed email address", 400, LocalDateTime.now());
 
-      ErrorDto errorDto = new ErrorDto("/auth/login", "must be a well-formed email address", 400, LocalDateTime.now());
-
-
-      // When
+      // when
       ResultActions response = mockMvc.perform(post("/auth/login")
           .contentType(MediaType.APPLICATION_JSON)
           .content(objectMapper.writeValueAsString(loginRequestDto)));
+
       //then
       response.andExpect(MockMvcResultMatchers.status().isBadRequest())
-          .andExpect(MockMvcResultMatchers.jsonPath("$[0].path", Matchers.is(errorDto.getPath())))
-          .andExpect(MockMvcResultMatchers.jsonPath("$[0].message", Matchers.is(errorDto.getMessage())))
-          .andExpect(MockMvcResultMatchers.jsonPath("$[0].statusCode", Matchers.is(errorDto.getStatusCode())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$[0].path", Matchers.is(expectedErrorDto.getPath())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$[0].message", Matchers.is(expectedErrorDto.getMessage())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$[0].statusCode", Matchers.is(expectedErrorDto.getStatusCode())))
           .andDo(MockMvcResultHandlers.print());
     }
 
     @Test
     public void login_passwordMoreThan16_return400ErrorDto() throws Exception {
-      // Given
+      //given
       LoginRequestDto loginRequestDto = new LoginRequestDto("2123@test.com", "333333333333333333333333333333");
       LoginResponseDto loginResponseDto = new LoginResponseDto("accessToken", "refreshToken", loginRequestDto.getEmail(), "testName");
       given(authenticationService.login(loginRequestDto)).willReturn(loginResponseDto);
 
-      ErrorDto errorDto = new ErrorDto("/auth/login", "password size must be between 8 and 16", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
+      ErrorDto expectedErrorDto = new ErrorDto("/auth/login", "password size must be between 8 and 16", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
 
-      // When
+      //when
       ResultActions response = mockMvc.perform(post("/auth/login")
           .contentType(MediaType.APPLICATION_JSON)
           .content(objectMapper.writeValueAsString(loginRequestDto)));
+
       //then
       response.andExpect(MockMvcResultMatchers.status().isBadRequest())
-          .andExpect(MockMvcResultMatchers.jsonPath("$[0].path", Matchers.is(errorDto.getPath())))
-          .andExpect(MockMvcResultMatchers.jsonPath("$[0].message", Matchers.is(errorDto.getMessage())))
-          .andExpect(MockMvcResultMatchers.jsonPath("$[0].statusCode", Matchers.is(errorDto.getStatusCode())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$[0].path", Matchers.is(expectedErrorDto.getPath())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$[0].message", Matchers.is(expectedErrorDto.getMessage())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$[0].statusCode", Matchers.is(expectedErrorDto.getStatusCode())))
           .andDo(MockMvcResultHandlers.print());
     }
 
@@ -171,25 +168,27 @@ public class AuthenticationControllerTest {
     @Test
     void reIssueAccessToken_validState_returnLoginResponseDto() throws Exception {
       //given
-      RefreshTokenDto refreshTokenDto = new RefreshTokenDto();
-      refreshTokenDto.setToken("refreshToken_for_test");
-      LoginResponseDto loginResponseDto = new LoginResponseDto("accessToken", "refreshToken", "test@test.com", "testName");
-      RefreshToken refreshToken = new RefreshToken();
-      refreshToken.setToken("token");
-      given(refreshTokenService.selectRefreshTokenByTokenValue(anyString())).willReturn(Optional.of(refreshToken));
-      given(authenticationService.authenticateWithRefreshToken(anyString())).willReturn(loginResponseDto);
+      RefreshTokenDto refreshTokenDtoForRequest = new RefreshTokenDto();
+      refreshTokenDtoForRequest.setToken("refreshToken_for_test");
+
+      LoginResponseDto expectedLoginResponse = new LoginResponseDto("accessToken", "refreshToken", "test@test.com", "testName");
+      RefreshToken savedRefreshToken = new RefreshToken();
+      savedRefreshToken.setToken("token");
+
+      given(refreshTokenService.selectRefreshTokenByTokenValue(anyString())).willReturn(Optional.of(savedRefreshToken));
+      given(authenticationService.authenticateWithRefreshToken(anyString())).willReturn(expectedLoginResponse);
 
       //when
       ResultActions response = mockMvc.perform(post("/auth/refresh")
           .contentType(MediaType.APPLICATION_JSON)
-          .content(objectMapper.writeValueAsString(refreshTokenDto)));
+          .content(objectMapper.writeValueAsString(refreshTokenDtoForRequest)));
 
       //then
       response.andExpect(MockMvcResultMatchers.status().isOk())
-          .andExpect(MockMvcResultMatchers.jsonPath("$.accessToken", Matchers.is(loginResponseDto.getAccessToken())))
-          .andExpect(MockMvcResultMatchers.jsonPath("$.refreshToken", Matchers.is(loginResponseDto.getRefreshToken())))
-          .andExpect(MockMvcResultMatchers.jsonPath("$.email", Matchers.is(loginResponseDto.getEmail())))
-          .andExpect(MockMvcResultMatchers.jsonPath("$.name", Matchers.is(loginResponseDto.getName())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$.accessToken", Matchers.is(expectedLoginResponse.getAccessToken())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$.refreshToken", Matchers.is(expectedLoginResponse.getRefreshToken())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$.email", Matchers.is(expectedLoginResponse.getEmail())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$.name", Matchers.is(expectedLoginResponse.getName())))
           .andDo(MockMvcResultHandlers.print());
 
       then(authenticationService).should(times(1)).authenticateWithRefreshToken(anyString());
@@ -198,22 +197,22 @@ public class AuthenticationControllerTest {
     @Test
     void reIssueAccessToken_nonexistentToken_return404ErrorDto() throws Exception {
       //given
-      RefreshTokenDto refreshTokenDto = new RefreshTokenDto();
-      refreshTokenDto.setToken("refreshToken_for_test");
+      RefreshTokenDto refreshTokenDtoForRequest = new RefreshTokenDto();
+      refreshTokenDtoForRequest.setToken("refreshToken_for_test");
 
       given(refreshTokenService.selectRefreshTokenByTokenValue(anyString())).willReturn(Optional.empty());
 
-      ErrorDto errorDto = new ErrorDto("/auth/refresh", "token doesn't exist in database", HttpStatus.NOT_FOUND.value(), LocalDateTime.now());
+      ErrorDto expectedErrorDto = new ErrorDto("/auth/refresh", "Token does not exist in the database. Token: "+refreshTokenDtoForRequest.getToken(), HttpStatus.NOT_FOUND.value(), LocalDateTime.now());
       //when
       ResultActions response = mockMvc.perform(post("/auth/refresh")
           .contentType(MediaType.APPLICATION_JSON)
-          .content(objectMapper.writeValueAsString(refreshTokenDto)));
+          .content(objectMapper.writeValueAsString(refreshTokenDtoForRequest)));
 
       //then
       response.andExpect(MockMvcResultMatchers.status().isNotFound())
-          .andExpect(MockMvcResultMatchers.jsonPath("$.path", Matchers.is(errorDto.getPath())))
-          .andExpect(MockMvcResultMatchers.jsonPath("$.message", Matchers.is(errorDto.getMessage())))
-          .andExpect(MockMvcResultMatchers.jsonPath("$.statusCode", Matchers.is(errorDto.getStatusCode())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$.path", Matchers.is(expectedErrorDto.getPath())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$.message", Matchers.is(expectedErrorDto.getMessage())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$.statusCode", Matchers.is(expectedErrorDto.getStatusCode())))
           .andDo(MockMvcResultHandlers.print());
 
       then(authenticationService).should(times(0)).authenticateWithRefreshToken(anyString());
@@ -222,32 +221,30 @@ public class AuthenticationControllerTest {
     @Test
     void reIssueAccessToken_refreshTokenExpired_throwJwtAuthenticationException() throws Exception {
       //given
-      RefreshTokenDto refreshTokenDto = new RefreshTokenDto();
-      refreshTokenDto.setToken("expired_refresh_token");
-      given(refreshTokenService.selectRefreshTokenByTokenValue(anyString()))
-          .willReturn(Optional.of(new RefreshToken()));
+      RefreshTokenDto refreshTokenDtoForRequest = new RefreshTokenDto();
+      refreshTokenDtoForRequest.setToken("expired_refresh_token");
+      given(refreshTokenService.selectRefreshTokenByTokenValue(anyString())).willReturn(Optional.of(new RefreshToken()));
 
       given(authenticationService.authenticateWithRefreshToken(any()))
           .willThrow(new JwtAuthenticationException(JwtExceptionType.EXPIRED_REFRESH_TOKEN.getMessage(),
               JwtExceptionType.EXPIRED_REFRESH_TOKEN));
 
-      ErrorDto errorDto = new ErrorDto("/auth/refresh", JwtExceptionType.EXPIRED_REFRESH_TOKEN.getMessage(), HttpStatus.UNAUTHORIZED.value(), LocalDateTime.now());
+      ErrorDto expectedErrorDto = new ErrorDto("/auth/refresh", JwtExceptionType.EXPIRED_REFRESH_TOKEN.getMessage(), HttpStatus.UNAUTHORIZED.value(), LocalDateTime.now());
+
       //when
       ResultActions response = mockMvc.perform(post("/auth/refresh")
           .contentType(MediaType.APPLICATION_JSON)
-          .content(objectMapper.writeValueAsString(refreshTokenDto)));
+          .content(objectMapper.writeValueAsString(refreshTokenDtoForRequest)));
 
       //then
       response.andExpect(MockMvcResultMatchers.status().isUnauthorized())
-          .andExpect(MockMvcResultMatchers.jsonPath("$.path", Matchers.is(errorDto.getPath())))
-          .andExpect(MockMvcResultMatchers.jsonPath("$.message", Matchers.is(errorDto.getMessage())))
-          .andExpect(MockMvcResultMatchers.jsonPath("$.statusCode", Matchers.is(errorDto.getStatusCode())))
-          .andExpect(MockMvcResultMatchers.header().exists("JwtException"))
-          .andExpect(MockMvcResultMatchers.header().string("JwtException", JwtExceptionType.EXPIRED_REFRESH_TOKEN.getCode()))
+          .andExpect(MockMvcResultMatchers.jsonPath("$.path", Matchers.is(expectedErrorDto.getPath())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$.message", Matchers.is(expectedErrorDto.getMessage())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$.statusCode", Matchers.is(expectedErrorDto.getStatusCode())))
+          .andExpect(MockMvcResultMatchers.header().exists(JWT_EXCEPTION_HEADER))
+          .andExpect(MockMvcResultMatchers.header().string(JWT_EXCEPTION_HEADER, JwtExceptionType.EXPIRED_REFRESH_TOKEN.getCode()))
           .andDo(MockMvcResultHandlers.print());
-
     }
-
   }
 
   @Nested
@@ -255,17 +252,13 @@ public class AuthenticationControllerTest {
     @Test
     void logout_validState_deleteTokenInDB() throws Exception {
       //given
-      MemberInfoInToken loggedInMember =
-          MemberInfoInToken
-              .builder()
-              .memberId(1L)
-              .build();
+      MemberInfoInToken loggedInMember = MemberInfoInToken.builder().memberId(1L).build();
       given(argumentResolver.supportsParameter(any())).willReturn(true);
       given(argumentResolver.resolveArgument(any(), any(), any(), any())).willReturn(loggedInMember);
 
       //when
       ResultActions response = mockMvc.perform(delete("/auth/logout")
-          .header("authorization", "token"));
+          .header("Authorization", "token"));
       //then
       response.andExpect(MockMvcResultMatchers.status().isOk())
           .andDo(MockMvcResultHandlers.print());

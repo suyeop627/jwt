@@ -39,12 +39,12 @@ public class LoggedInUserInfoArgumentResolver implements HandlerMethodArgumentRe
       authentication = SecurityContextHolder.getContext().getAuthentication();
 
       if (authentication == null || authentication instanceof AnonymousAuthenticationToken) {
-       return null;
+        return null;
       }
 
     } catch (Exception e) {
       log.error("Exception occurred in LoggedInUserInfoArgumentResolver. {}, {}", e.getMessage(), e.getCause());
-      throw new BadCredentialsException("exception occurred in LoggedInUserInfoArgumentResolver",e);
+      throw new BadCredentialsException("exception occurred in LoggedInUserInfoArgumentResolver", e);
     }
 
     JwtAuthenticationToken jwtAuthenticationToken = (JwtAuthenticationToken) authentication;
@@ -63,6 +63,7 @@ public class LoggedInUserInfoArgumentResolver implements HandlerMethodArgumentRe
 
     memberInfoInToken.setRoles(roles);
 
+    log.info("MemberInfoInToken generated from access token. Logged-in member: {}", memberInfoInToken);
     return memberInfoInToken;
   }
 }

@@ -70,7 +70,7 @@ class JwtAuthenticationFilterTest {
   @Test
   void doFilterInternal_noTokenInHeader_passFilter() throws ServletException, IOException {
     // Given
-    given(request.getRequestURI()).willReturn("/api");
+    given(request.getRequestURI()).willReturn("/members");
 
     // When
     jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
@@ -91,6 +91,7 @@ class JwtAuthenticationFilterTest {
 
     // When
     jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
+
     // /Then
     then(authenticationEntryPoint).should(times(1)).commence(any(), any(), any());
     then(filterChain).shouldHaveNoInteractions();

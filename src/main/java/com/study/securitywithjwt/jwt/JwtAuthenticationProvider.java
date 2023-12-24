@@ -41,7 +41,7 @@ public class JwtAuthenticationProvider implements AuthenticationProvider {
         .roles(new HashSet<>(roles))
         .build();
 
-    log.info("user {} get authentication", memberInfoInToken);
+    log.info("Authentication created from access token. AccessToken: {}", token);
 
     return new JwtAuthenticationToken(memberInfoInToken, token, authorities);
   }

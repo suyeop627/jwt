@@ -16,9 +16,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.test.context.TestPropertySource;
 
 import java.time.LocalDateTime;
-import java.util.Date;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -135,7 +133,60 @@ class RefreshTokenRepositoryTest {
       //when
       refreshTokenRepository.deleteByMemberId(memberId);
       //then
-      assertThat(refreshTokenRepository.count() == refreshTokenRepositoryCountBeforeDeletion-1).isTrue();
+      assertThat(refreshTokenRepository.count() == refreshTokenRepositoryCountBeforeDeletion - 1).isTrue();
+    }
+  }
+
+  @Nested
+  class CleanupRefreshToken {
+    int expiredTokenCount = 4;
+    int generatedRefreshTokenCount = 10;
+    long countBeforeSaveAll;
+    List<RefreshToken> refreshTokenList;
+
+    @BeforeEach
+    void setUp(){
+      refreshTokenList = new ArrayList<>();
+      countBeforeSaveAll = refreshTokenRepository.count();
+
+      for (long i = 1; i <= generatedRefreshTokenCount; i++) {
+        LocalDateTime expiredAt = i <= expiredTokenCount ?
+            LocalDateTime.now().minusHours(i) :
+            LocalDateTime.now().plusHours(i);
+
+        RefreshToken refreshToken = RefreshToken.builder()
+            .token("testToken" + i)
+            .memberId(i)
+            .expiredAt(expiredAt)
+            .build();
+
+        refreshTokenList.add(refreshToken);
+      }
+
+      refreshTokenRepository.saveAll(refreshTokenList);
+    }
+    @AfterEach
+    void tearDown(){
+      refreshTokenRepository.deleteAll();
+    }
+
+    @Test
+    void cleanupRefreshToken_countExpiredToken_returnCount(){
+      //given
+      LocalDateTime now = LocalDateTime.now();
+      //when
+      long countByExpiredAtBefore = refreshTokenRepository.countByExpiredAtBefore(now);
+      //then
+      assertThat(countByExpiredAtBefore).isEqualTo(expiredTokenCount);
+    }
+    @Test
+    void cleanupRefreshToken_expiredTokenExist_deleteExpiredToken() {
+      //given
+      LocalDateTime now = LocalDateTime.now();
+      //when
+      refreshTokenRepository.deleteByExpiredAtBefore(now);
+      //then
+      assertThat(refreshTokenRepository.count()).isEqualTo((generatedRefreshTokenCount - expiredTokenCount) + countBeforeSaveAll);
     }
   }
 }

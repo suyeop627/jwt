@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 import java.util.Set;
-
+//회원 CRUD 처리 클래스
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("members")
@@ -31,7 +31,7 @@ public class MemberController {
   //회원 가입
   @PostMapping
   public ResponseEntity<?> signup(@Valid @RequestBody MemberSignupRequestDto signupRequestDto, BindingResult bindingResult, HttpServletRequest request) {
-    log.info("Attempting signup for user {}", signupRequestDto);
+    log.info("Attempting signup for user with email: {}, name: {}", signupRequestDto.getEmail(), signupRequestDto.getName());
 
     ResponseEntity<Set<ErrorDto>> errorDtoSet = ControllerUtils.getErrorResponseFromBindingResult(bindingResult, request);
     if (errorDtoSet != null) return errorDtoSet;
@@ -47,20 +47,18 @@ public class MemberController {
   @GetMapping
   public ResponseEntity<Page<MemberDto>> getAllMembers(@RequestParam(name = "page", defaultValue = "1") Integer page,
                                                        @RequestParam(name = "size", defaultValue = "10") Integer size) {
-    Page<MemberDto> members = memberService.getAllMembers(page, size);
-    System.out.println("members = " + members);
-    System.out.println("members.getContent() = " + members.getContent());
-    System.out.println("members.getTotalElements() = " + members.getTotalElements());
-    System.out.println("members.getSize() = " + members.getSize());
-    System.out.println("members.getNumber() = " + members.getNumber());
-    System.out.println("members.getNumberOfElements() = " + members.getNumberOfElements());
-    System.out.println("members.getNumber() = " + members.getNumber());
-    return ResponseEntity.ok().body(members);
+    log.info("Method: getAllMembers called with page: {}, size: {}", page, size);
+    Page<MemberDto> memberDtoPage = memberService.getAllMembers(page, size);
+
+    log.info("Retrieved {} members in page {}. Total pages: {}, Total members: {}.",
+        memberDtoPage.getNumberOfElements(), page, memberDtoPage.getTotalPages(), memberDtoPage.getTotalElements());
+    return ResponseEntity.ok().body(memberDtoPage);
   }
 
   //단일 회원 정보 조회
   @GetMapping("/{memberId}")
   public ResponseEntity<MemberDto> getMember(@PathVariable("memberId") Long memberId) {
+    log.info("Method: getMember called with memberId {}", memberId);
     return ResponseEntity.ok().body(memberService.getMember(memberId));
   }
 
@@ -70,15 +68,18 @@ public class MemberController {
   public ResponseEntity<?> updateMember(@Valid @RequestBody MemberUpdateRequestDto updateRequestDto, //최상단으로
                                         BindingResult bindingResult,
                                         @PathVariable("memberId") Long memberId,
-                                        @LoggedInUserInfo MemberInfoInToken loginUser,
+                                        @LoggedInUserInfo MemberInfoInToken loginMember,
                                         HttpServletRequest request) {
-    log.info("Attempting update for user {} by member(memberId: {})", memberId, loginUser);
-    System.out.println("bindingResult = " + bindingResult);
+
+    log.info("Attempting to update target member(memberId: {}) by member(memberId: {}, roles: {})",
+        memberId, loginMember.getMemberId(), loginMember.getRoles());
+
     ResponseEntity<Set<ErrorDto>> errorDtoSet = ControllerUtils.getErrorResponseFromBindingResult(bindingResult, request);
     if (errorDtoSet != null) return errorDtoSet;
-    isAdminOrMemberOwnOrThrow(memberId, loginUser);
 
-
+    isAdminOrMemberOwnOrThrow(memberId, loginMember);
+    log.info("Update request successful. Target member(memberId: {}) info updated by member(memberId: {}, roles: {})",
+        memberId, loginMember.getMemberId(), loginMember.getRoles());
     return ResponseEntity.ok().body(memberService.updateMember(memberId, updateRequestDto));
   }
 
@@ -86,8 +87,8 @@ public class MemberController {
     if (!loginMember.getRoles().contains(UserRole.ROLE_ADMIN.name())
         && !uriMemberId.equals(loginMember.getMemberId())) {
       throw new AccessDeniedException(
-          String.format("member (memberId : %s, memberEmail : %s) doesn't have permission to delete member %s",
-              loginMember.getMemberId(), loginMember.getEmail(), uriMemberId)
+          String.format("Member (memberId: %s, roles: %s) does not have permission to change data of the target member(memberId: %s).",
+              loginMember.getMemberId(),loginMember.getRoles(), uriMemberId)
       );
     }
   }
@@ -97,12 +98,14 @@ public class MemberController {
   @DeleteMapping("/{memberId}")
   public ResponseEntity<?> deleteMember(@PathVariable("memberId") Long memberId,
                                         @LoggedInUserInfo MemberInfoInToken loginMember) {
-    log.info("member(memberId: {}) deletion request from memberId: {}, role: {}", memberId, loginMember.getMemberId(), loginMember.getRoles());
+    log.info("member(memberId: {}) deletion request from memberId: {}, role: {}", memberId,
+        loginMember.getMemberId(), loginMember.getRoles());
 
     isAdminOrMemberOwnOrThrow(memberId, loginMember);
 
     memberService.deleteMember(memberId);
-
+    log.info("Deletion request successful. Target member(memberId: {}) info deleted by member(memberId: {}, roles: {})",
+        memberId, loginMember.getMemberId(), loginMember.getRoles());
     return ResponseEntity.ok().build();
   }
 
