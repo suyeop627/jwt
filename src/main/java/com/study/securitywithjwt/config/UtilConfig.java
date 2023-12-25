@@ -20,11 +20,9 @@ import java.util.Set;
 @Configuration
 public class UtilConfig {
   private final PasswordEncoder passwordEncoder;
-
   public UtilConfig(PasswordEncoder passwordEncoder) {
     this.passwordEncoder = passwordEncoder;
   }
-
   @Bean
   public CommandLineRunner insertRoles(RoleRepository roleRepository) {
     return args -> {

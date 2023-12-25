@@ -1,7 +1,7 @@
 package com.study.securitywithjwt.exception;
 
 import lombok.Getter;
-
+//Jwt 관련 예외 처리를 위한 jwt 예외 관련 상수
 public enum JwtExceptionType {
   TOKEN_NOT_FOUND("NOT_FOUND_TOKEN", "Token not found in header"),
   INVALID_TOKEN("INVALID_TOKEN", "Token is invalid"),

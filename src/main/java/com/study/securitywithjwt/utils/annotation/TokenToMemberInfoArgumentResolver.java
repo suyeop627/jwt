@@ -1,10 +1,9 @@
 package com.study.securitywithjwt.utils.annotation;
 
-import com.study.securitywithjwt.dto.MemberInfoInToken;
+import com.study.securitywithjwt.dto.LoginMemberInfo;
 import com.study.securitywithjwt.jwt.JwtAuthenticationToken;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.MethodParameter;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -21,13 +20,14 @@ import java.util.stream.Collectors;
 
 @Component
 @Slf4j
-public class LoggedInUserInfoArgumentResolver implements HandlerMethodArgumentResolver {
+public class TokenToMemberInfoArgumentResolver implements HandlerMethodArgumentResolver {
 
+  //argumentResolver 적용할 파라미터 판단.
   @Override
   public boolean supportsParameter(MethodParameter parameter) {
-    return parameter.hasParameterAnnotation(LoggedInUserInfo.class) && parameter.getParameterType() == MemberInfoInToken.class;
+    return parameter.hasParameterAnnotation(TokenToMemberInfo.class) && parameter.getParameterType() == LoginMemberInfo.class;
   }
-
+  //SecurityContext의 Authentication의 principal을 가져와서, LoginMemberInfo 의 형태로 반환
   @Override
   public Object resolveArgument(MethodParameter parameter,
                                 ModelAndViewContainer mavContainer,
@@ -38,12 +38,13 @@ public class LoggedInUserInfoArgumentResolver implements HandlerMethodArgumentRe
     try {
       authentication = SecurityContextHolder.getContext().getAuthentication();
 
-      if (authentication == null || authentication instanceof AnonymousAuthenticationToken) {
+//      permitAll()인 uri로 접근할 경우, authentication은 AnonymousAuthenticationToken로 저장되어 따로 분류함.
+      if (authentication == null /*|| authentication instanceof AnonymousAuthenticationToken*/) {
         return null;
       }
 
     } catch (Exception e) {
-      log.error("Exception occurred in LoggedInUserInfoArgumentResolver. {}, {}", e.getMessage(), e.getCause());
+      log.error("Exception occurred in LoggedInUserInfoArgumentResolver.", e);
       throw new BadCredentialsException("exception occurred in LoggedInUserInfoArgumentResolver", e);
     }
 
@@ -54,16 +55,16 @@ public class LoggedInUserInfoArgumentResolver implements HandlerMethodArgumentRe
       return null;
     }
 
-    MemberInfoInToken memberInfoInToken = (MemberInfoInToken) principal;
+    LoginMemberInfo loginMemberInfo = (LoginMemberInfo) principal;
 
     Collection<GrantedAuthority> authorities = jwtAuthenticationToken.getAuthorities();
     Set<String> roles = authorities.stream()
         .map(GrantedAuthority::getAuthority)
         .collect(Collectors.toSet());
 
-    memberInfoInToken.setRoles(roles);
+    loginMemberInfo.setRoles(roles);
 
-    log.info("MemberInfoInToken generated from access token. Logged-in member: {}", memberInfoInToken);
-    return memberInfoInToken;
+    log.info("LoginMemberInfo generated from access token. Logged-in member: {}", loginMemberInfo);
+    return loginMemberInfo;
   }
 }

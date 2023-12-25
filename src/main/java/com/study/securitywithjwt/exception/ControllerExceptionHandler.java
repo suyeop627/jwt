@@ -12,12 +12,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
-import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
-
-@ControllerAdvice
+//Controller 에서 발생하는 예외 처리 클래스
+@RestControllerAdvice
 @Slf4j
 public class ControllerExceptionHandler {
 

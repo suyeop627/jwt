@@ -1,6 +1,6 @@
 package com.study.securitywithjwt.jwt;
 
-import com.study.securitywithjwt.dto.MemberInfoInToken;
+import com.study.securitywithjwt.dto.LoginMemberInfo;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import org.junit.jupiter.api.Test;
@@ -44,11 +44,11 @@ class JwtAuthenticationProviderTest {
         .add("memberId", memberId)
         .build();
 
-    given(jwtUtils.getClaimsFromAccessToken(anyString())).willReturn(claims);
+    given(jwtUtils.extractClaimsFromAccessToken(anyString())).willReturn(claims);
 
     //when
     JwtAuthenticationToken jwtAuthenticationToken = jwtAuthenticationProvider.authenticate(authentication);
-    MemberInfoInToken principal =(MemberInfoInToken) jwtAuthenticationToken.getPrincipal();
+    LoginMemberInfo principal =(LoginMemberInfo) jwtAuthenticationToken.getPrincipal();
 
     //then
     assertThat(principal).isNotNull();

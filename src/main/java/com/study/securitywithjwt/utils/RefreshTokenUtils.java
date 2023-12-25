@@ -15,7 +15,7 @@ public class RefreshTokenUtils {
   public RefreshTokenUtils(RefreshTokenRepository refreshTokenRepository) {
     this.refreshTokenRepository = refreshTokenRepository;
   }
-
+//매일 자정에 db에 저장된 refreshToken중, 만료된 토큰을 삭제함
   @Scheduled(cron = "0 0 0 * * ?") // 매일 자정에 실행
   public void deleteExpiredRefreshToken() {
     LocalDateTime now = LocalDateTime.now();

@@ -71,7 +71,7 @@ public class AuthenticationIT {
     signupRequestDto.setPassword(validPassword);
     signupRequestDto.setGender(Gender.MALE);
     signupRequestDto.setPhone(validPhone);
-
+    System.out.println("signupRequestDto = " + signupRequestDto);
 
     //signup - beforeSignup - login fail(401)
     postLoginRequestWithLoginRequestDto(loginRequestDto)
@@ -188,7 +188,7 @@ public class AuthenticationIT {
     //parsing access token in response, and compare with member information
     String accessToken = loginResponseEntityExchangeResult.getResponseBody().getAccessToken();
 
-    Claims claimsFromAccessToken = jwtUtils.getClaimsFromAccessToken(accessToken);
+    Claims claimsFromAccessToken = jwtUtils.extractClaimsFromAccessToken(accessToken);
     assertThat(claimsFromAccessToken.getSubject()).isEqualTo(loginRequestDto.getEmail());
     assertThat(claimsFromAccessToken.get("name")).isEqualTo(signupRequestDto.getName());
     assertThat(claimsFromAccessToken.getExpiration()).isAfter(new Date());
@@ -197,7 +197,7 @@ public class AuthenticationIT {
 
     //parsing refresh token in response, and compare with member information
     String refreshToken = loginResponseEntityExchangeResult.getResponseBody().getRefreshToken();
-    Claims claimsFromRefreshToken = jwtUtils.getClaimsFromRefreshToken(refreshToken);
+    Claims claimsFromRefreshToken = jwtUtils.extractClaimsFromRefreshToken(refreshToken);
     assertThat(claimsFromRefreshToken.getSubject()).isEqualTo(loginRequestDto.getEmail());
     assertThat(claimsFromRefreshToken.get("name")).isEqualTo(signupRequestDto.getName());
 
@@ -208,6 +208,29 @@ public class AuthenticationIT {
     assertThat(claimsFromRefreshToken.getExpiration()).isCloseTo(REFRESH_TOKEN_EXPIRATION, delta);
     assertThat(claimsFromRefreshToken.getIssuedAt()).isBefore(new Date());
     assertThat(claimsFromRefreshToken.get("roles")).isEqualTo(List.of("ROLE_USER"));
+
+
+
+
+    //logout - invalid access token - 401
+    webTestClient.delete().uri("/auth/logout")
+        .header("Authorization", String.format("Bearer %s", "asdf"))
+        .exchange()
+        .expectStatus()
+        .isUnauthorized();
+
+    //logout - no access token - 401
+    webTestClient.delete().uri("/auth/logout")
+        .exchange()
+        .expectStatus()
+        .isUnauthorized();
+
+    //logout - valid access token - 401
+    webTestClient.delete().uri("/auth/logout")
+        .header("Authorization", String.format("Bearer %s", accessToken))
+        .exchange()
+        .expectStatus()
+        .isOk();
 
   }
 

@@ -3,7 +3,7 @@ package com.study.securitywithjwt.controller;
 import com.study.securitywithjwt.dto.*;
 import com.study.securitywithjwt.service.MemberService;
 import com.study.securitywithjwt.utils.ControllerUtils;
-import com.study.securitywithjwt.utils.annotation.LoggedInUserInfo;
+import com.study.securitywithjwt.utils.annotation.TokenToMemberInfo;
 import com.study.securitywithjwt.utils.member.UserRole;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -24,11 +24,10 @@ import java.util.Set;
 @RequestMapping("members")
 @Slf4j
 public class MemberController {
-
   private final MemberService memberService;
-
-
   //회원 가입
+  //회원 정보 입력값 유효성 검사 후, 이상 있을 시 ErrorDto 반환
+  //가입 성공시, 201 및 생성된 URI 반환
   @PostMapping
   public ResponseEntity<?> signup(@Valid @RequestBody MemberSignupRequestDto signupRequestDto, BindingResult bindingResult, HttpServletRequest request) {
     log.info("Attempting signup for user with email: {}, name: {}", signupRequestDto.getEmail(), signupRequestDto.getName());
@@ -37,13 +36,14 @@ public class MemberController {
     if (errorDtoSet != null) return errorDtoSet;
 
     MemberSignupResponseDto memberSignupResponseDto = memberService.addMember(signupRequestDto);
-    URI uri = ControllerUtils.getCreatedUri(memberSignupResponseDto);
+    URI uri = ControllerUtils.getCreatedUri(memberSignupResponseDto.getMemberId());
 
     log.info("Created user uri: {}", uri);
     return ResponseEntity.created(uri).body(memberSignupResponseDto);
   }
 
   //회원 목록 조회
+  //Page<MemberDto> 를 반환하며, 기본 10개의 MemberDto를 하나의 페이지로 반환
   @GetMapping
   public ResponseEntity<Page<MemberDto>> getAllMembers(@RequestParam(name = "page", defaultValue = "1") Integer page,
                                                        @RequestParam(name = "size", defaultValue = "10") Integer size) {
@@ -63,12 +63,14 @@ public class MemberController {
   }
 
   //회원 정보 수정
+  //ROLE_ADMIN : 모든 회원의 정보 수정 가능
+  //ROLE_USER : 전달받은 memberId와 access token에 담긴 memberId가 일치하는 경우에만 수정 가능
   @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
   @PutMapping("/{memberId}")
   public ResponseEntity<?> updateMember(@Valid @RequestBody MemberUpdateRequestDto updateRequestDto, //최상단으로
                                         BindingResult bindingResult,
                                         @PathVariable("memberId") Long memberId,
-                                        @LoggedInUserInfo MemberInfoInToken loginMember,
+                                        @TokenToMemberInfo LoginMemberInfo loginMember,
                                         HttpServletRequest request) {
 
     log.info("Attempting to update target member(memberId: {}) by member(memberId: {}, roles: {})",
@@ -83,7 +85,9 @@ public class MemberController {
     return ResponseEntity.ok().body(memberService.updateMember(memberId, updateRequestDto));
   }
 
-  private void isAdminOrMemberOwnOrThrow(Long uriMemberId, MemberInfoInToken loginMember) {
+  //ROLE_ADMIN이거나, 로그인한 회원의 Id와 수정할 회원의 Id가 일치하는지 판단
+  //조건을 충족하지 못할 경우, AccessDeniedException을 던짐
+  private void isAdminOrMemberOwnOrThrow(Long uriMemberId, LoginMemberInfo loginMember) {
     if (!loginMember.getRoles().contains(UserRole.ROLE_ADMIN.name())
         && !uriMemberId.equals(loginMember.getMemberId())) {
       throw new AccessDeniedException(
@@ -94,10 +98,12 @@ public class MemberController {
   }
 
   //회원 삭제
+  //ROLE_ADMIN : 모든 회원의 정보 삭제 가능
+  //ROLE_USER : 전달받은 memberId와 access token에 담긴 memberId가 일치하는 경우에만 삭제 가능
   @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
   @DeleteMapping("/{memberId}")
   public ResponseEntity<?> deleteMember(@PathVariable("memberId") Long memberId,
-                                        @LoggedInUserInfo MemberInfoInToken loginMember) {
+                                        @TokenToMemberInfo LoginMemberInfo loginMember) {
     log.info("member(memberId: {}) deletion request from memberId: {}, role: {}", memberId,
         loginMember.getMemberId(), loginMember.getRoles());
 
@@ -108,6 +114,4 @@ public class MemberController {
         memberId, loginMember.getMemberId(), loginMember.getRoles());
     return ResponseEntity.ok().build();
   }
-
-
 }

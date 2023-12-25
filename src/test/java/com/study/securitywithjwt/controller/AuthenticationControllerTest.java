@@ -9,9 +9,10 @@ import com.study.securitywithjwt.exception.JwtExceptionType;
 import com.study.securitywithjwt.jwt.JwtAuthenticationProvider;
 import com.study.securitywithjwt.service.AuthenticationService;
 import com.study.securitywithjwt.service.RefreshTokenService;
-import com.study.securitywithjwt.utils.annotation.LoggedInUserInfoArgumentResolver;
+import com.study.securitywithjwt.utils.annotation.TokenToMemberInfoArgumentResolver;
 import org.hamcrest.Matchers;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +32,7 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -44,7 +46,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @WebMvcTest(AuthenticationController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @TestPropertySource("classpath:application-test.properties")
-@DisplayNameGeneration(DisplayNameGenerator.IndicativeSentences.class)
 public class AuthenticationControllerTest {
   @Autowired
   MockMvc mockMvc;
@@ -62,7 +63,7 @@ public class AuthenticationControllerTest {
   @Value("${jwt.exception.response.header}")
   private String JWT_EXCEPTION_HEADER;
   @MockBean
-  private LoggedInUserInfoArgumentResolver argumentResolver;
+  private TokenToMemberInfoArgumentResolver argumentResolver;
 
   @Test
   public void login_validState_returnLoginResponseDto() throws Exception {
@@ -176,7 +177,7 @@ public class AuthenticationControllerTest {
       savedRefreshToken.setToken("token");
 
       given(refreshTokenService.selectRefreshTokenByTokenValue(anyString())).willReturn(Optional.of(savedRefreshToken));
-      given(authenticationService.authenticateWithRefreshToken(anyString())).willReturn(expectedLoginResponse);
+      given(authenticationService.reAuthenticateWithRefreshToken(anyString())).willReturn(expectedLoginResponse);
 
       //when
       ResultActions response = mockMvc.perform(post("/auth/refresh")
@@ -191,7 +192,7 @@ public class AuthenticationControllerTest {
           .andExpect(MockMvcResultMatchers.jsonPath("$.name", Matchers.is(expectedLoginResponse.getName())))
           .andDo(MockMvcResultHandlers.print());
 
-      then(authenticationService).should(times(1)).authenticateWithRefreshToken(anyString());
+      then(authenticationService).should(times(1)).reAuthenticateWithRefreshToken(anyString());
     }
 
     @Test
@@ -215,7 +216,7 @@ public class AuthenticationControllerTest {
           .andExpect(MockMvcResultMatchers.jsonPath("$.statusCode", Matchers.is(expectedErrorDto.getStatusCode())))
           .andDo(MockMvcResultHandlers.print());
 
-      then(authenticationService).should(times(0)).authenticateWithRefreshToken(anyString());
+      then(authenticationService).should(times(0)).reAuthenticateWithRefreshToken(anyString());
     }
 
     @Test
@@ -225,7 +226,7 @@ public class AuthenticationControllerTest {
       refreshTokenDtoForRequest.setToken("expired_refresh_token");
       given(refreshTokenService.selectRefreshTokenByTokenValue(anyString())).willReturn(Optional.of(new RefreshToken()));
 
-      given(authenticationService.authenticateWithRefreshToken(any()))
+      given(authenticationService.reAuthenticateWithRefreshToken(any()))
           .willThrow(new JwtAuthenticationException(JwtExceptionType.EXPIRED_REFRESH_TOKEN.getMessage(),
               JwtExceptionType.EXPIRED_REFRESH_TOKEN));
 
@@ -252,7 +253,13 @@ public class AuthenticationControllerTest {
     @Test
     void logout_validState_deleteTokenInDB() throws Exception {
       //given
-      MemberInfoInToken loggedInMember = MemberInfoInToken.builder().memberId(1L).build();
+      LoginMemberInfo loggedInMember = LoginMemberInfo.builder().
+          memberId(1L).
+          email("1234@test.com").
+          name("test").
+          roles(Set.of("ROLE_USER"))
+          .build();
+
       given(argumentResolver.supportsParameter(any())).willReturn(true);
       given(argumentResolver.resolveArgument(any(), any(), any(), any())).willReturn(loggedInMember);
 
@@ -264,20 +271,5 @@ public class AuthenticationControllerTest {
           .andDo(MockMvcResultHandlers.print());
       then(refreshTokenService).should(times(1)).deleteRefreshTokenByMemberId(loggedInMember.getMemberId());
     }
-
-    @Test
-    void logout_noToken_throwBadRequestException() throws Exception {
-      //given
-      given(argumentResolver.supportsParameter(any())).willReturn(true);
-      given(argumentResolver.resolveArgument(any(), any(), any(), any())).willReturn(null);
-
-      //when
-      ResultActions response = mockMvc.perform(delete("/auth/logout"));
-      //then
-      response.andExpect(MockMvcResultMatchers.status().isBadRequest())
-          .andDo(MockMvcResultHandlers.print());
-      then(refreshTokenService).shouldHaveNoInteractions();
-    }
   }
-
 }

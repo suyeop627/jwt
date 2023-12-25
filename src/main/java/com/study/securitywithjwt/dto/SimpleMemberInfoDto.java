@@ -20,4 +20,8 @@ public class SimpleMemberInfoDto {
   @Pattern(regexp ="^01(?:0|1|[6-9])\\d{7,8}$", message = "must be well-formed phone number")
   @NotNull(message = "phone must not be null")
   private String phone;
+
+  @Size(min=8, max = 16, message = "password size must be between 8 and 16")
+  @NotNull(message = "password must not be null")
+  private String password;
 }

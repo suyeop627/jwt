@@ -6,7 +6,7 @@ import com.study.securitywithjwt.exception.ResourceNotFoundException;
 import com.study.securitywithjwt.service.AuthenticationService;
 import com.study.securitywithjwt.service.RefreshTokenService;
 import com.study.securitywithjwt.utils.ControllerUtils;
-import com.study.securitywithjwt.utils.annotation.LoggedInUserInfo;
+import com.study.securitywithjwt.utils.annotation.TokenToMemberInfo;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -58,7 +58,7 @@ public class AuthenticationController {
            String.format("Token does not exist in the database. Token: %s",refreshTokenDto.getToken())));
 
     //longin response Dto with reissued access token
-    LoginResponseDto response = authenticationService.authenticateWithRefreshToken(refreshToken.getToken());
+    LoginResponseDto response = authenticationService.reAuthenticateWithRefreshToken(refreshToken.getToken());
 
     log.info("Member: {} , Access token changed", response.getEmail());
     log.info("New access token: {}", response.getAccessToken());
@@ -68,11 +68,7 @@ public class AuthenticationController {
   //로그 아웃
   //db에 저장된 refresh token 삭제
   @DeleteMapping("/logout")
-  public ResponseEntity<Void> logout(@LoggedInUserInfo MemberInfoInToken loggedInMember) {
-    if (loggedInMember == null) {
-      log.info("Logout called from a not logged-in user.");
-      return ResponseEntity.badRequest().build();
-    }
+  public ResponseEntity<Void> logout(@TokenToMemberInfo LoginMemberInfo loggedInMember) {
     log.info("Logout called. Member ID: {}", loggedInMember.getMemberId());
     refreshTokenService.deleteRefreshTokenByMemberId(loggedInMember.getMemberId());
     return new ResponseEntity<>(HttpStatus.OK);

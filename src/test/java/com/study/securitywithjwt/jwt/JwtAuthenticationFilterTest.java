@@ -55,19 +55,6 @@ class JwtAuthenticationFilterTest {
   }
 
   @Test
-  void doFilterInternal_requestForLogin_passFilter() throws ServletException, IOException {
-    // Given
-    given(request.getRequestURI()).willReturn("/auth/login");
-
-    // When
-    jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
-
-    // Then
-    then(filterChain).should(times(1)).doFilter(request, response);
-    then(jwtAuthenticationProvider).shouldHaveNoInteractions();
-  }
-
-  @Test
   void doFilterInternal_noTokenInHeader_passFilter() throws ServletException, IOException {
     // Given
     given(request.getRequestURI()).willReturn("/members");

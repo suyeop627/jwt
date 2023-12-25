@@ -9,7 +9,7 @@ import com.study.securitywithjwt.exception.CustomAuthenticationEntryPoint;
 import com.study.securitywithjwt.exception.ResourceNotFoundException;
 import com.study.securitywithjwt.jwt.JwtAuthenticationProvider;
 import com.study.securitywithjwt.service.MemberService;
-import com.study.securitywithjwt.utils.annotation.LoggedInUserInfoArgumentResolver;
+import com.study.securitywithjwt.utils.annotation.TokenToMemberInfoArgumentResolver;
 import com.study.securitywithjwt.utils.member.Gender;
 import com.study.securitywithjwt.utils.member.UserRole;
 import org.hamcrest.Matchers;
@@ -60,7 +60,7 @@ class MemberControllerTest {
   JwtAuthenticationProvider jwtAuthenticationProvider;
 
   @MockBean
-  LoggedInUserInfoArgumentResolver argumentResolver;
+  TokenToMemberInfoArgumentResolver argumentResolver;
 
   @MockBean
   PasswordEncoder passwordEncoder;
