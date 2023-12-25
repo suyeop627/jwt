@@ -5,6 +5,9 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+
 //리프레시 토큰 엔티티
 @Entity
 @Table(name="refresh_token")
@@ -21,4 +24,7 @@ public class RefreshToken {
 
   @Column(length = 512)
   private String token;
+
+  @Column
+  private LocalDateTime expiredAt;
 }

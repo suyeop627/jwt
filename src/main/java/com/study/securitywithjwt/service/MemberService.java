@@ -32,7 +32,7 @@ public class MemberService {
   private final String EMAIL_FIELD_NAME = "email";
   private final String PHONE_FIELD_NAME = "phone";
 
-
+//회원 정보를 db에 저장함.
   public MemberSignupResponseDto addMember(MemberSignupRequestDto requestDto) {
     checkDuplicationOrThrow(requestDto, EMAIL_FIELD_NAME);
     checkDuplicationOrThrow(requestDto, PHONE_FIELD_NAME);
@@ -50,7 +50,7 @@ public class MemberService {
   }
 
 
-
+//MemberSignupRequestDto 를 Member 로 변환하여 반환함
   private Member createMemberFromSignupRequest(MemberSignupRequestDto requestDto) {
     Member member = Member.builder()
         .email(requestDto.getEmail())
@@ -65,6 +65,7 @@ public class MemberService {
     return member;
   }
 
+  //MemberSignupRequestDto에 Role이 없을경우, ROLE_USER를 추가하고, Role이 포함된 경우, Set<Role>의 형식으로 변환하여 Member에 추가.
   private void addRoleToNewMember(MemberSignupRequestDto requestDto, Member newMember) {
     //일반회원 권한 추가
     if(requestDto.getUserRoles()==null){
@@ -74,12 +75,14 @@ public class MemberService {
       newMember.setRoles(roles);
     }
   }
+  //MemberSignupRequestDto에서 전달받은 UserRole에 해당하는 Role을 Db에서 조회하여 반환
   private Role getRoleOrThrow(UserRole userRole) {
     log.error("ROLE_USER is not found");
     return roleRepository.findByName(userRole)
         .orElseThrow(() -> new ResourceNotFoundException("role user is not exists"));
   }
 
+  //가입 및 조회에서 입력받은 필드 중, 중복을 허용하지 않는 필드의 중복여부 판단
   private void checkDuplicationOrThrow(SimpleMemberInfoDto requestDto, String fieldName) {
 
     if ((fieldName.equals(PHONE_FIELD_NAME) && memberRepository.existsByPhone(requestDto.getPhone()))||
@@ -88,6 +91,8 @@ public class MemberService {
       throw new ResourceDuplicatedException(String.format("%s number entered already exists", fieldName));
     }
   }
+
+  //회원 정보 수정
   public MemberDto updateMember(Long memberId, MemberUpdateRequestDto updateRequestDto) {
 
     Member member = findMemberByIdOrThrow(memberId);
@@ -105,21 +110,24 @@ public class MemberService {
     member.setEmail(updateRequestDto.getEmail());
     member.setPhone(updateRequestDto.getPhone());
     member.setName(updateRequestDto.getName());
-    memberRepository.save(member);
+    Member updatedMember = memberRepository.save(member);
 
-    return memberDtoMapper.apply(member);
+    return memberDtoMapper.apply(updatedMember);
   }
 
+  //memberId에 해당하는 회원 조회
   private Member findMemberByIdOrThrow(Long memberId) {
     return memberRepository.findById(memberId)
         .orElseThrow(() -> new ResourceNotFoundException(String.format("member id %s is not found", memberId)));
   }
 
+  //memberId에 해당하는 Member를 MemberDto로 변환하여 반환
   public MemberDto getMember(Long memberId) {
     Member member = findMemberByIdOrThrow(memberId);
     return memberDtoMapper.apply(member);
   }
 
+  //조회된 Page<Member>를 Page<MemberDto>로 변환하여 반환
   public Page<MemberDto> getAllMembers(Integer browserPageNumber, Integer size) {
     int pageNumber = browserPageNumber - 1; //Page는 pageNumber 0부터 시작이므로, 전달받은 page에서 -1
 
@@ -127,6 +135,7 @@ public class MemberService {
     Page<Member> memberPages = memberRepository.findAll(pageRequest);
     return memberPages.map(memberDtoMapper);
   }
+  //memberId에 해당하는 회원 id 삭제
   public void deleteMember(Long memberId) {
     memberRepository.findById(memberId)
         .orElseThrow(()->

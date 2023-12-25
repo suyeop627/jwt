@@ -14,6 +14,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 //회원 엔티티
+//DaoAuthenticationProvider 에 의해 인증이 된 경우, Authentication의 principal인 MemberDetilas의 필드로 사용됨.
 @Entity
 @Table(name="member")
 @Builder

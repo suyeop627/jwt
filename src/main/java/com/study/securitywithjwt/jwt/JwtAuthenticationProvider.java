@@ -1,6 +1,6 @@
 package com.study.securitywithjwt.jwt;
 
-import com.study.securitywithjwt.dto.MemberInfoInToken;
+import com.study.securitywithjwt.dto.LoginMemberInfo;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,7 +12,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.stream.Collectors;
-
+// Authentication 이 JwtAuthenticationToken 인 경우의 인증 처리 담당.
+// access token을 파싱하여 JwtAuthenticationToken 객체를 생성함.
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -26,7 +27,7 @@ public class JwtAuthenticationProvider implements AuthenticationProvider {
 
     String token = authenticationToken.getToken();
 
-    Claims claimsFromAccessToken = jwtUtils.getClaimsFromAccessToken(token);
+    Claims claimsFromAccessToken = jwtUtils.extractClaimsFromAccessToken(token);
 
     List<String> roles = (List<String>) claimsFromAccessToken.get("roles");
 
@@ -34,16 +35,16 @@ public class JwtAuthenticationProvider implements AuthenticationProvider {
         .map(SimpleGrantedAuthority::new)
         .collect(Collectors.toSet());
 
-    MemberInfoInToken memberInfoInToken = MemberInfoInToken.builder()
+    LoginMemberInfo loginMemberInfo = LoginMemberInfo.builder()
         .memberId(claimsFromAccessToken.get("memberId", Long.class))
         .email(claimsFromAccessToken.getSubject())
         .name(claimsFromAccessToken.get("name", String.class))
         .roles(new HashSet<>(roles))
         .build();
 
-    log.info("user {} get authentication", memberInfoInToken);
+    log.info("Authentication created from access token. AccessToken: {}", token);
 
-    return new JwtAuthenticationToken(memberInfoInToken, token, authorities);
+    return new JwtAuthenticationToken(loginMemberInfo, token, authorities);
   }
 
 

@@ -9,7 +9,7 @@ import com.study.securitywithjwt.exception.CustomAuthenticationEntryPoint;
 import com.study.securitywithjwt.exception.ResourceNotFoundException;
 import com.study.securitywithjwt.jwt.JwtAuthenticationProvider;
 import com.study.securitywithjwt.service.MemberService;
-import com.study.securitywithjwt.utils.annotation.LoggedInUserInfoArgumentResolver;
+import com.study.securitywithjwt.utils.annotation.TokenToMemberInfoArgumentResolver;
 import com.study.securitywithjwt.utils.member.Gender;
 import com.study.securitywithjwt.utils.member.UserRole;
 import org.hamcrest.Matchers;
@@ -60,7 +60,7 @@ class MemberControllerTest {
   JwtAuthenticationProvider jwtAuthenticationProvider;
 
   @MockBean
-  LoggedInUserInfoArgumentResolver argumentResolver;
+  TokenToMemberInfoArgumentResolver argumentResolver;
 
   @MockBean
   PasswordEncoder passwordEncoder;
@@ -74,58 +74,51 @@ class MemberControllerTest {
   @Autowired
   ObjectMapper objectMapper;
 
-  @Test
-  void signup_validState_returnSignupResponseDto() throws Exception {
-    //given
-    MemberSignupRequestDto memberSignupRequestDto = new MemberSignupRequestDto();
-    memberSignupRequestDto.setGender(Gender.MALE);
-    memberSignupRequestDto.setPassword("00000000");
-    memberSignupRequestDto.setEmail("test@test.com");
-    memberSignupRequestDto.setName("testName");
-    memberSignupRequestDto.setPhone("01011111111");
-
-    MemberSignupResponseDto expectedMemberSignupResponseDto = MemberSignupResponseDto.builder()
-        .memberId(1L)
-        .email(memberSignupRequestDto.getEmail())
-        .regdate(LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES))//소수점 이하 자리수 문제 방지하기 위해서 자릿수 조절.
-        .name(memberSignupRequestDto.getName())
-        .build();
-
-    given(memberService.addMember(any())).willReturn(expectedMemberSignupResponseDto);
-    //when
-    ResultActions response = mockMvc.perform(post("/members")
-        .contentType(MediaType.APPLICATION_JSON)
-        .content(objectMapper.writeValueAsString(memberSignupRequestDto)));
-
-    //then
-    response.andExpect(MockMvcResultMatchers.status().isCreated())
-        .andExpect(MockMvcResultMatchers.header().string("location", Matchers.endsWith("members/" + expectedMemberSignupResponseDto.getMemberId())))
-        .andExpect(MockMvcResultMatchers.jsonPath("$.memberId").value(Matchers.is(expectedMemberSignupResponseDto.getMemberId()), Long.class))
-        .andExpect(MockMvcResultMatchers.jsonPath("$.email", Matchers.is(expectedMemberSignupResponseDto.getEmail())))
-        .andExpect(MockMvcResultMatchers.jsonPath("$.name", Matchers.is(expectedMemberSignupResponseDto.getName())))
-        .andExpect(MockMvcResultMatchers.jsonPath("$.regdate", Matchers.is(expectedMemberSignupResponseDto.getRegdate().toString() + ":00")))
-        .andDo(MockMvcResultHandlers.print());
-
-    //value() -타입을 떠나서 같은 값을 가지는지 확인 / type을 지정해줄 수도 잇음.
-    // value(Matchers.is(expectedMemberSignupResponseDto.getMemberId()),Long.class))
-    // value(expectedMemberSignupResponseDto.getMemberId()))
-
-    //Matchers.is / equalTo- 타입, 값 정확하게 확인
-  }
-
   @Nested
   class SignUpValidationTest {
     @Test
+    void signup_validState_returnSignupResponseDto() throws Exception {
+      //given
+      MemberSignupRequestDto validSignupRequestDto = getValidSignupRequestDto();
+
+      MemberSignupResponseDto expectedMemberSignupResponseDto = MemberSignupResponseDto.builder()
+          .memberId(1L)
+          .email(validSignupRequestDto.getEmail())
+          .regdate(LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES))//소수점 이하 자리수 문제 방지하기 위해서 자릿수 조절.
+          .name(validSignupRequestDto.getName())
+          .build();
+
+      given(memberService.addMember(any())).willReturn(expectedMemberSignupResponseDto);
+      //when
+      ResultActions response = mockMvc.perform(post("/members")
+          .contentType(MediaType.APPLICATION_JSON)
+          .content(objectMapper.writeValueAsString(validSignupRequestDto)));
+
+      //then
+      response.andExpect(MockMvcResultMatchers.status().isCreated())
+          .andExpect(MockMvcResultMatchers.header().string("location", Matchers.endsWith("members/" + expectedMemberSignupResponseDto.getMemberId())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$.memberId").value(Matchers.is(expectedMemberSignupResponseDto.getMemberId()), Long.class))
+          .andExpect(MockMvcResultMatchers.jsonPath("$.email", Matchers.is(expectedMemberSignupResponseDto.getEmail())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$.name", Matchers.is(expectedMemberSignupResponseDto.getName())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$.regdate", Matchers.is(expectedMemberSignupResponseDto.getRegdate().toString() + ":00")))
+          .andDo(MockMvcResultHandlers.print());
+
+      //value() -타입을 떠나서 같은 값을 가지는지 확인 / type을 지정해줄 수도 잇음.
+      // value(Matchers.is(expectedMemberSignupResponseDto.getMemberId()),Long.class))
+      // value(expectedMemberSignupResponseDto.getMemberId()))
+
+      //Matchers.is / equalTo- 타입, 값 정확하게 확인
+    }
+
+    @Test
     public void signup_invalidEmailAndPasswordAndName_return400ErrorDtos() throws Exception {
       // Given
-      MemberSignupRequestDto signupRequestDto = new MemberSignupRequestDto();
-      signupRequestDto.setPassword("1");
-      signupRequestDto.setEmail("a");
-      signupRequestDto.setPhone("01000000000");
-      signupRequestDto.setGender(Gender.MALE);
-      signupRequestDto.setName("1");
+      MemberSignupRequestDto invalidEmailPasswordNameRequest = getValidSignupRequestDto();
+      invalidEmailPasswordNameRequest.setPassword("1");
+      invalidEmailPasswordNameRequest.setEmail("a");
+      invalidEmailPasswordNameRequest.setName("1");
 
-      List<ErrorDto> expectedErrors = Arrays.asList(
+      List<ErrorDto> expectedErrorDtoList = Arrays.asList(
           new ErrorDto("/members", "must be a well-formed email address", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now()),
           new ErrorDto("/members", "password size must be between 8 and 16", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now()),
           new ErrorDto("/members", "name size must be between 2 and 16", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now())
@@ -134,13 +127,14 @@ class MemberControllerTest {
       // When
       ResultActions response = mockMvc.perform(post("/members")
           .contentType(MediaType.APPLICATION_JSON)
-          .content(objectMapper.writeValueAsString(signupRequestDto)));
+          .content(objectMapper.writeValueAsString(invalidEmailPasswordNameRequest)));
+
       //then
       response.andExpect(MockMvcResultMatchers.status().isBadRequest())
-          .andExpect(MockMvcResultMatchers.jsonPath("$", Matchers.hasSize(expectedErrors.size())))
-          .andExpect(MockMvcResultMatchers.jsonPath("$[*].path", Matchers.containsInAnyOrder(expectedErrors.stream().map(ErrorDto::getPath).toArray())))
-          .andExpect(MockMvcResultMatchers.jsonPath("$[*].message", Matchers.containsInAnyOrder(expectedErrors.stream().map(ErrorDto::getMessage).toArray())))
-          .andExpect(MockMvcResultMatchers.jsonPath("$[*].statusCode", Matchers.containsInAnyOrder(expectedErrors.stream().map(ErrorDto::getStatusCode).toArray())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$", Matchers.hasSize(expectedErrorDtoList.size())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$[*].path", Matchers.containsInAnyOrder(expectedErrorDtoList.stream().map(ErrorDto::getPath).toArray())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$[*].message", Matchers.containsInAnyOrder(expectedErrorDtoList.stream().map(ErrorDto::getMessage).toArray())))
+          .andExpect(MockMvcResultMatchers.jsonPath("$[*].statusCode", Matchers.containsInAnyOrder(expectedErrorDtoList.stream().map(ErrorDto::getStatusCode).toArray())))
           .andDo(MockMvcResultHandlers.print());
 
       then(memberService).shouldHaveNoInteractions();
@@ -150,46 +144,36 @@ class MemberControllerTest {
     @Test
     public void signup_passwordLessThan8_return400ErrorDto() throws Exception {
       // Given
-      MemberSignupRequestDto signupRequestDto = new MemberSignupRequestDto();
-      signupRequestDto.setPassword("2");
-      signupRequestDto.setPhone("01000000000");
-      signupRequestDto.setEmail("test@test.com");
-      signupRequestDto.setGender(Gender.MALE);
-      signupRequestDto.setName("testName");
+      MemberSignupRequestDto passwordLessThan8Request = getValidSignupRequestDto();
+      passwordLessThan8Request.setPassword("2");
 
-      ErrorDto errorDto = new ErrorDto("/members", "password size must be between 8 and 16", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
-
+      ErrorDto expectedErrorDto = new ErrorDto("/members", "password size must be between 8 and 16", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
 
       // When
       ResultActions response = mockMvc.perform(post("/members")
           .contentType(MediaType.APPLICATION_JSON)
-          .content(objectMapper.writeValueAsString(signupRequestDto)));
+          .content(objectMapper.writeValueAsString(passwordLessThan8Request)));
       //then
-      compareResponseWithSingleExpectedErrorDto(errorDto, response);
+      compareResponseWithSingleExpectedErrorDto(expectedErrorDto, response);
 
       then(memberService).shouldHaveNoInteractions();
-
     }
 
 
     @Test
     public void signup_nameLessThen2_return400ErrorDto() throws Exception {
       // Given
-      MemberSignupRequestDto signupRequestDto = new MemberSignupRequestDto();
-      signupRequestDto.setPassword("3123123123");
-      signupRequestDto.setPhone("01000000000");
-      signupRequestDto.setEmail("test@test.com");
-      signupRequestDto.setGender(Gender.MALE);
-      signupRequestDto.setName("2");
+      MemberSignupRequestDto nameLessThen2Request = getValidSignupRequestDto();
+      nameLessThen2Request.setName("2");
 
-      ErrorDto errorDto = new ErrorDto("/members", "name size must be between 2 and 16", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
+      ErrorDto expectedErrorDto = new ErrorDto("/members", "name size must be between 2 and 16", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
       // When
       ResultActions response = mockMvc.perform(post("/members")
           .contentType(MediaType.APPLICATION_JSON)
-          .content(objectMapper.writeValueAsString(signupRequestDto)));
+          .content(objectMapper.writeValueAsString(nameLessThen2Request)));
 
       //then
-      compareResponseWithSingleExpectedErrorDto(errorDto, response);
+      compareResponseWithSingleExpectedErrorDto(expectedErrorDto, response);
 
       then(memberService).shouldHaveNoInteractions();
 
@@ -199,21 +183,18 @@ class MemberControllerTest {
     @Test
     public void signup_invalidEmail_return400errorDto() throws Exception {
       // Given
-      MemberSignupRequestDto signupRequestDto = new MemberSignupRequestDto();
-      signupRequestDto.setPassword("323333123");
-      signupRequestDto.setPhone("01000000000");
-      signupRequestDto.setEmail("1");
-      signupRequestDto.setGender(Gender.MALE);
-      signupRequestDto.setName("testName");
+      MemberSignupRequestDto invalidEmailRequest = getValidSignupRequestDto();
+      invalidEmailRequest.setEmail("1");
 
-      ErrorDto errorDto = new ErrorDto("/members", "must be a well-formed email address", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
+      ErrorDto expectedErrorDto = new ErrorDto("/members", "must be a well-formed email address", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
 
       // When
       ResultActions response = mockMvc.perform(post("/members")
           .contentType(MediaType.APPLICATION_JSON)
-          .content(objectMapper.writeValueAsString(signupRequestDto)));
+          .content(objectMapper.writeValueAsString(invalidEmailRequest)));
+
       //then
-      compareResponseWithSingleExpectedErrorDto(errorDto, response);
+      compareResponseWithSingleExpectedErrorDto(expectedErrorDto, response);
 
       then(memberService).shouldHaveNoInteractions();
     }
@@ -222,23 +203,29 @@ class MemberControllerTest {
     @Test
     public void signup_invalidPhone_return400errorDto() throws Exception {
       // Given
-      MemberSignupRequestDto signupRequestDto = new MemberSignupRequestDto();
-      signupRequestDto.setPassword("323333123");
-      signupRequestDto.setPhone("11000000000");
-      signupRequestDto.setEmail("test@test.com");
-      signupRequestDto.setGender(Gender.MALE);
-      signupRequestDto.setName("testName");
+      MemberSignupRequestDto invalidPhoneRequest = getValidSignupRequestDto();
+      invalidPhoneRequest.setPhone("11000000000");
 
-      ErrorDto errorDto = new ErrorDto("/members", "must be well-formed phone number", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
+
+      ErrorDto expectedErrorDto = new ErrorDto("/members", "must be well-formed phone number", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
 
       // When
       ResultActions response = mockMvc.perform(post("/members")
           .contentType(MediaType.APPLICATION_JSON)
-          .content(objectMapper.writeValueAsString(signupRequestDto)));
+          .content(objectMapper.writeValueAsString(invalidPhoneRequest)));
       //then
-      compareResponseWithSingleExpectedErrorDto(errorDto, response);
+      compareResponseWithSingleExpectedErrorDto(expectedErrorDto, response);
 
       then(memberService).shouldHaveNoInteractions();
+    }
+    private  MemberSignupRequestDto getValidSignupRequestDto() {
+      MemberSignupRequestDto memberSignupRequestDto = new MemberSignupRequestDto();
+      memberSignupRequestDto.setGender(Gender.MALE);
+      memberSignupRequestDto.setPassword("00000000");
+      memberSignupRequestDto.setEmail("test@test.com");
+      memberSignupRequestDto.setName("testName");
+      memberSignupRequestDto.setPhone("01011111111");
+      return memberSignupRequestDto;
     }
 
     private void compareResponseWithSingleExpectedErrorDto(ErrorDto errorDto, ResultActions response) throws Exception {
@@ -250,39 +237,32 @@ class MemberControllerTest {
     }
   }
 
-  //todo memberController getAllmember 테스트
-  //todo member crud
-  //todo customer crud
   @Test
   public void getMember_validState_returnMemberDto() throws Exception {
     //given
-    Long memberId = 1L;
-    String email = "member1@test.com";
-    String phone = "0102222222";
-    String name = "member1";
-    MemberDto memberDto = MemberDto.builder()
-        .memberId(memberId)
-        .email(email)
+    MemberDto expectedMember = MemberDto.builder()
+        .memberId(1L)
+        .email("member1@test.com")
         .gender(Gender.FEMALE)
-        .name(name)
+        .name("member1")
         .roles(Set.of(UserRole.ROLE_USER.name()))
-        .phone(phone)
+        .phone("0102222222")
         .build();
-    given(memberService.getMember(anyLong())).willReturn(memberDto);
+    given(memberService.getMember(anyLong())).willReturn(expectedMember);
     //when
-    ResultActions response = mockMvc.perform(get("/members/" + memberId));
+    ResultActions response = mockMvc.perform(get("/members/" + expectedMember.getMemberId()));
 
     //then
     response.andExpect(MockMvcResultMatchers.status().isOk())
-        .andExpect(MockMvcResultMatchers.jsonPath("$.memberId", Matchers.is(memberId.intValue())))
-        .andExpect(MockMvcResultMatchers.jsonPath("$.name", Matchers.is(name)))
-        .andExpect(MockMvcResultMatchers.jsonPath("$.phone", Matchers.is(phone)))
-        .andExpect(MockMvcResultMatchers.jsonPath("$.email", Matchers.is(email)));
+        .andExpect(MockMvcResultMatchers.jsonPath("$.memberId", Matchers.is(expectedMember.getMemberId().intValue())))
+        .andExpect(MockMvcResultMatchers.jsonPath("$.name", Matchers.is(expectedMember.getName())))
+        .andExpect(MockMvcResultMatchers.jsonPath("$.phone", Matchers.is(expectedMember.getPhone())))
+        .andExpect(MockMvcResultMatchers.jsonPath("$.email", Matchers.is(expectedMember.getEmail())));
 
   }
 
   @Test
-  public void getMember_memberNonexistent_returnMemberDto() throws Exception {
+  public void getMember_memberNonexistent_throwResourceNotFoundException() throws Exception {
     //given
     Long memberId = 1L;
     given(memberService.getMember(anyLong())).willThrow(new ResourceNotFoundException(String.format("member id %s is not found", memberId)));

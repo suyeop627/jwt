@@ -11,7 +11,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 //스프링 시큐리티에서 사용될 Bean을 등록할 클래스
-
 @Configuration
 public class SecurityConfig {
   @Bean

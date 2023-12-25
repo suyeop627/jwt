@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
-//애플리케이션에서 발생하는 에러 전달 dto
+//애플리케이션에서 발생하는 에러를 클라이언트로 전달하기 위한 DTO
 @Data
 @Builder
 @AllArgsConstructor

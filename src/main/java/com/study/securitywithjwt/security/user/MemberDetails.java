@@ -7,11 +7,11 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 import java.util.stream.Collectors;
-
-public class MemberUserDetails implements UserDetails {
+//UserDetailsService 에 의해 찾아질 UserDetails의 구현체
+public class MemberDetails implements UserDetails {
   private final Member member;
 
-  public MemberUserDetails(Member member) {
+  public MemberDetails(Member member) {
     this.member = member;
   }
 

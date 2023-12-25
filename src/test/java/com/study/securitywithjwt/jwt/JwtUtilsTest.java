@@ -2,7 +2,8 @@ package com.study.securitywithjwt.jwt;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.study.securitywithjwt.dto.MemberInfoInToken;
+import com.study.securitywithjwt.dto.LoginMemberInfo;
+import com.study.securitywithjwt.utils.member.UserRole;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
@@ -21,11 +22,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class JwtUtilsTest {
-
   JwtUtils jwtUtils;
   String ACCESS_TOKEN_KEY_FOR_TEST = "test_access_key_test_access_key_test_access_key_test_access_key";
   String REFRESH_TOKEN_KEY_FOR_TEST = "test_refresh_key_test_refresh_key_test_refresh_key_test_refresh_key";
-
   String ACCESS_TOKEN_TYPE = "ACCESS";
   String REFRESH_TOKEN_TYPE = "REFRESH";
 
@@ -43,30 +42,21 @@ class JwtUtilsTest {
   @Test
   void issueToken_validState_returnJwt() {
     //given
-    Long memberId = 1L;
-    String subject = "test@test.com";
-    String name = "testName";
-    Set<String> roles = Set.of("ROLE_USER", "ROLE_ADMIN");
-
-    MemberInfoInToken memberInfoInToken = MemberInfoInToken.builder()
-        .memberId(memberId).name(name).email(subject).roles(roles).build();
-
-    String type = ACCESS_TOKEN_TYPE;
+    LoginMemberInfo loginMemberInfo = getLoginMemberInfo();
     //when
-    String issuedToken = jwtUtils.issueToken(memberInfoInToken, type);
+    String issuedToken = jwtUtils.issueToken(loginMemberInfo, ACCESS_TOKEN_TYPE);
 
     //then
-    Claims claimsFromIssuedToken = jwtUtils.getClaimsFromAccessToken(issuedToken);
-    assertThat(claimsFromIssuedToken.getSubject()).isEqualTo(subject);
-    assertThat(claimsFromIssuedToken.get("name")).isEqualTo(name);
-    assertThat(claimsFromIssuedToken.get("roles")).isEqualTo(new ArrayList<>(roles));//Claims는 기본적으로 arraylist로 저장함
+    Claims claimsFromIssuedToken = jwtUtils.extractClaimsFromAccessToken(issuedToken);
+    assertThat(claimsFromIssuedToken.getSubject()).isEqualTo(loginMemberInfo.getEmail());
+    assertThat(claimsFromIssuedToken.get("name")).isEqualTo(loginMemberInfo.getName());
+    assertThat(claimsFromIssuedToken.get("roles")).isEqualTo(new ArrayList<>(loginMemberInfo.getRoles()));//Claims는 기본적으로 arraylist로 저장함
   }
 
   @Test
   void getClaimsFromAccessToken_validState_returnClaims() throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
     //given
-    Long ACCESS_TOKEN_DURATION_FOR_TEST = 1000000L;
-
+    long ACCESS_TOKEN_DURATION_FOR_TEST = 1000000L;
 
     //Field accessTokenKeyField = JwtUtils.class.getField("ACCESS_TOKEN_KEY");
     Class<?> jwtUtilsClass = Class.forName("com.study.securitywithjwt.jwt.JwtUtils");
@@ -74,68 +64,59 @@ class JwtUtilsTest {
     accessTokenKeyField.setAccessible(true);
     accessTokenKeyField.set(jwtUtils, ACCESS_TOKEN_DURATION_FOR_TEST);
 
+    LoginMemberInfo loginMemberInfo = getLoginMemberInfo();
 
-    Long memberId = 1L;
-    String subject = "test@test.com";
-    String name = "testName";
-    Set<String> roles = Set.of("ROLE_USER", "ROLE_ADMIN");
-
-    MemberInfoInToken memberInfoInToken = MemberInfoInToken.builder()
-        .memberId(memberId).name(name).email(subject).roles(roles).build();
-
-    String type = ACCESS_TOKEN_TYPE;
-
-
-
-    String issuedToken = jwtUtils.issueToken(memberInfoInToken, type);
+    String issuedToken = jwtUtils.issueToken(loginMemberInfo, ACCESS_TOKEN_TYPE);
 
     //when
-    Claims claimsFromIssuedToken = jwtUtils.getClaimsFromAccessToken(issuedToken);
+    Claims claimsFromIssuedToken = jwtUtils.extractClaimsFromAccessToken(issuedToken);
 
     //then
     assertThat(claimsFromIssuedToken).isNotNull();
     assertThat(claimsFromIssuedToken.getExpiration())
-        .isEqualTo(new Date(claimsFromIssuedToken.getIssuedAt().getTime()+ACCESS_TOKEN_DURATION_FOR_TEST));
+        .isEqualTo(new Date(claimsFromIssuedToken.getIssuedAt().getTime() + ACCESS_TOKEN_DURATION_FOR_TEST));
   }
 
   @Test
   void getClaimsFromRefreshToken_validState_returnClaims() throws IllegalAccessException, NoSuchFieldException {
     //given
-    Long REFRESH_TOKEN_DURATION_FOR_TEST = 1000000L;
+    long REFRESH_TOKEN_DURATION_FOR_TEST = 1000000L;
 
     Field refreshTokenKeyField = JwtUtils.class.getDeclaredField("REFRESH_TOKEN_DURATION");
     refreshTokenKeyField.setAccessible(true);
     refreshTokenKeyField.set(jwtUtils, REFRESH_TOKEN_DURATION_FOR_TEST);
 
-
-    Long memberId = 1L;
-    String subject = "test@test.com";
-    String name = "testName";
-    Set<String> roles = Set.of("ROLE_USER", "ROLE_ADMIN");
-    MemberInfoInToken memberInfoInToken = MemberInfoInToken.builder()
-        .memberId(memberId).name(name).email(subject).roles(roles).build();
+    LoginMemberInfo loginMemberInfo = getLoginMemberInfo();
 
     String type = REFRESH_TOKEN_TYPE;
-    String issuedToken = jwtUtils.issueToken(memberInfoInToken, type);
+    String issuedToken = jwtUtils.issueToken(loginMemberInfo, type);
 
     //when
-    Claims claimsFromIssuedToken = jwtUtils.getClaimsFromRefreshToken(issuedToken);
+    Claims claimsFromIssuedToken = jwtUtils.extractClaimsFromRefreshToken(issuedToken);
 
     //then
     assertThat(claimsFromIssuedToken).isNotNull();
     assertThat(claimsFromIssuedToken.getExpiration())
-        .isEqualTo(new Date(claimsFromIssuedToken.getIssuedAt().getTime()+REFRESH_TOKEN_DURATION_FOR_TEST));
+        .isEqualTo(new Date(claimsFromIssuedToken.getIssuedAt().getTime() + REFRESH_TOKEN_DURATION_FOR_TEST));
+  }
+  private LoginMemberInfo getLoginMemberInfo() {
+    return LoginMemberInfo.builder()
+        .memberId(1L)
+        .name("testName")
+        .email("test@test.com")
+        .roles(Set.of(UserRole.ROLE_USER.name(), UserRole.ROLE_ADMIN.name()))
+        .build();
   }
 
   @Nested
-  class TokenExceptionTest{
+  class TokenExceptionTest {
     @Test
     void getClaimsFromAccessToken_expiredToken_throwExpiredJwtException() {
       //given
       String token_expired = Jwts.builder()
           .subject("test")
           .issuedAt(new Date())
-          .expiration(new Date(new Date().getTime()-100))
+          .expiration(new Date(new Date().getTime() - 100))
           .claim("name", "name")
           .claim("roles", Set.of("ROLE_USER"))
           .claim("memberId", 1L)
@@ -143,7 +124,7 @@ class JwtUtilsTest {
           .compact();
 
       //when, then
-      assertThatThrownBy(() -> jwtUtils.getClaimsFromAccessToken(token_expired)).isInstanceOf(ExpiredJwtException.class);
+      assertThatThrownBy(() -> jwtUtils.extractClaimsFromAccessToken(token_expired)).isInstanceOf(ExpiredJwtException.class);
 
     }
 
@@ -154,16 +135,17 @@ class JwtUtilsTest {
       String token_null = null;
 
       //when, then
-      assertThatThrownBy(() -> jwtUtils.getClaimsFromAccessToken(token_illegalArgs1)).isInstanceOf(IllegalArgumentException.class);
-      assertThatThrownBy(() -> jwtUtils.getClaimsFromAccessToken(token_null)).isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(() -> jwtUtils.extractClaimsFromAccessToken(token_illegalArgs1)).isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(() -> jwtUtils.extractClaimsFromAccessToken(token_null)).isInstanceOf(IllegalArgumentException.class);
     }
+
     @Test
     void getClaimsFromAccessToken_InvalidSignature_throwSignatureException() {
       //given
-      String token_signatureInvalid= Jwts.builder()
+      String token_signatureInvalid = Jwts.builder()
           .subject("test")
           .issuedAt(new Date())
-          .expiration(new Date(new Date().getTime()-100))
+          .expiration(new Date(new Date().getTime() - 100))
           .claim("name", "name")
           .claim("roles", Set.of("ROLE_USER"))
           .claim("memberId", 1L)
@@ -171,7 +153,7 @@ class JwtUtilsTest {
           .compact();
 
       //when, then
-      assertThatThrownBy(() -> jwtUtils.getClaimsFromAccessToken(token_signatureInvalid)).isInstanceOf(SignatureException.class);
+      assertThatThrownBy(() -> jwtUtils.extractClaimsFromAccessToken(token_signatureInvalid)).isInstanceOf(SignatureException.class);
     }
 
     @Test
@@ -183,8 +165,8 @@ class JwtUtilsTest {
       String token_malFormed2_anywayBase64 = Base64.getEncoder().encodeToString(token_malFormed_anywayJson.getBytes());
 
       //when, then
-      assertThatThrownBy(() -> jwtUtils.getClaimsFromAccessToken(token_malFormed_anywayJson)).isInstanceOf(MalformedJwtException.class);
-      assertThatThrownBy(() -> jwtUtils.getClaimsFromAccessToken(token_malFormed2_anywayBase64)).isInstanceOf(MalformedJwtException.class);
+      assertThatThrownBy(() -> jwtUtils.extractClaimsFromAccessToken(token_malFormed_anywayJson)).isInstanceOf(MalformedJwtException.class);
+      assertThatThrownBy(() -> jwtUtils.extractClaimsFromAccessToken(token_malFormed2_anywayBase64)).isInstanceOf(MalformedJwtException.class);
     }
   }
 

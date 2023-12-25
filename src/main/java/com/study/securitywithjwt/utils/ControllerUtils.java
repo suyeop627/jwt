@@ -1,7 +1,6 @@
 package com.study.securitywithjwt.utils;
 
 import com.study.securitywithjwt.dto.ErrorDto;
-import com.study.securitywithjwt.dto.MemberSignupResponseDto;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +15,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public class ControllerUtils {
+  //controller에서 바인딩 된 에러가 있을 경우 처리
 
   public static ResponseEntity<Set<ErrorDto>> getErrorResponseFromBindingResult(BindingResult bindingResult, HttpServletRequest request) {
     if (bindingResult.hasErrors()) {
@@ -27,10 +27,11 @@ public class ControllerUtils {
     }
     return null;
   }
-  public static URI getCreatedUri(MemberSignupResponseDto memberSignupResponseDto) {
+  //자원 생성 후, 자원 생성 uri 반환
+  public static URI getCreatedUri(Long id) {
     return ServletUriComponentsBuilder.fromCurrentRequest()
         .path("/{id}")
-        .buildAndExpand(memberSignupResponseDto.getMemberId())
+        .buildAndExpand(id)
         .toUri();
   }
 }

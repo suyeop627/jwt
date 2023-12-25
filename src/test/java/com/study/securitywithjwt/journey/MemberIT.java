@@ -5,7 +5,6 @@ import com.study.securitywithjwt.TestConfig;
 import com.study.securitywithjwt.domain.Member;
 import com.study.securitywithjwt.domain.Role;
 import com.study.securitywithjwt.dto.*;
-import com.study.securitywithjwt.jwt.JwtUtils;
 import com.study.securitywithjwt.repository.MemberRepository;
 import com.study.securitywithjwt.repository.RefreshTokenRepository;
 import com.study.securitywithjwt.repository.RoleRepository;
@@ -21,7 +20,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 import java.util.List;
@@ -33,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
 @SpringBootTest(webEnvironment = RANDOM_PORT)
-@TestPropertySource(locations = "classpath:/application-test.properties")
+@TestPropertySource(locations = "classpath:application-test.properties")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import(TestConfig.class)
 @Slf4j
@@ -41,14 +39,13 @@ public class MemberIT {
   @Autowired
   ObjectMapper objectMapper;
   @Autowired
-  private JwtUtils jwtUtils;
-  @Autowired
   PasswordEncoder passwordEncoder;
   @Autowired
   private WebTestClient webTestClient;
 
   @Autowired
   RefreshTokenRepository refreshTokenRepository;
+
   @Autowired
   RefreshTokenService refreshTokenService;
   @Autowired
@@ -60,133 +57,98 @@ public class MemberIT {
   @Test
   void roleUserCrud() {
     /*role user*/
-    //sign in test member -> no role -> ROLE_USER assigned
-    String signupEmail = "testUser@email.com";
-    String signupPassword = "00000000";
-    String signupName = "testUser";
-    String signupPhone = "01000000000";
-    MemberSignupRequestDto signupRequestDto = new MemberSignupRequestDto();
-    signupRequestDto.setEmail(signupEmail);
-    signupRequestDto.setPassword(signupPassword);
-    signupRequestDto.setName(signupName);
-    signupRequestDto.setGender(Gender.MALE);
-    signupRequestDto.setPhone(signupPhone);
 
-    log.info("sign up request dto : {}", signupRequestDto);
+    //base account of roleUserCrud test
+    String roleUserEmail = "testUser@email.com";
+    String roleUserPassword = "00000000";
+    String roleUserName = "testUser";
+    String roleUserPhone = "01000000000";
+    MemberSignupRequestDto roleUserSignupRequest = new MemberSignupRequestDto();
+    roleUserSignupRequest.setEmail(roleUserEmail);
+    roleUserSignupRequest.setPassword(roleUserPassword);
+    roleUserSignupRequest.setName(roleUserName);
+    roleUserSignupRequest.setGender(Gender.MALE);
+    roleUserSignupRequest.setPhone(roleUserPhone);
 
-    EntityExchangeResult<MemberSignupResponseDto> signupResponse = webTestClient.post()
+    //sign up member for test - no role set - ROLE_USER assigned
+    MemberSignupResponseDto roleUserSignupResponse = webTestClient.post()
         .uri("/members")
         .contentType(MediaType.APPLICATION_JSON)
-        .bodyValue(signupRequestDto)
+        .bodyValue(roleUserSignupRequest)
         .exchange()
         .expectStatus().isCreated()
         .expectBody(MemberSignupResponseDto.class)
-        .returnResult();
+        .returnResult()
+        .getResponseBody();
 
-    log.info("sign up response dto : {}", signupResponse.getResponseBody());
 
-    Long testUserMemberId = Objects.requireNonNull(signupResponse.getResponseBody()).getMemberId();
+    //compare sign up request with sign up response
+    Long roleUserMemberId = Objects.requireNonNull(roleUserSignupResponse).getMemberId();
     Role userRole = roleRepository.findByName(UserRole.ROLE_USER).get();
-    Member savedMember = memberRepository.findById(testUserMemberId).get();
-    assertThat(savedMember.getRoles().size()).isEqualTo(1);
-    assertThat(savedMember.getRoles().contains(userRole)).isTrue();
+
+    Member savedRoleUserMember = memberRepository.findById(roleUserMemberId).get();
+
+    assertThat(savedRoleUserMember.getRoles().size()).isEqualTo(1);
+    assertThat(savedRoleUserMember.getRoles().contains(userRole)).isTrue();
 
 
-    //sign in test member -> no role -> requested roles assigned
-
-    String signupEmail2 = "testUserWithRoles@email.com";
-    String signupPassword2 = "00000000";
-    String signupName2 = "testUser";
-    String signupPhone2 = "01098761234";
-    MemberSignupRequestDto signupRequestDto2 = new MemberSignupRequestDto();
-    signupRequestDto2.setEmail(signupEmail2);
-    signupRequestDto2.setPassword(signupPassword2);
-    signupRequestDto2.setName(signupName2);
-    signupRequestDto2.setGender(Gender.MALE);
-    signupRequestDto2.setPhone(signupPhone2);
-
-    List<Role> allRolesList = roleRepository.findAll();
-    Set<UserRole> userRoleSet = allRolesList.stream().map(Role::getName).collect(Collectors.toSet());
-
-    signupRequestDto2.setUserRoles(userRoleSet);
-
-    log.info("sign up request dto : {}", signupRequestDto2);
-
-    EntityExchangeResult<MemberSignupResponseDto> signupResponse2 = webTestClient.post()
-        .uri("/members")
-        .contentType(MediaType.APPLICATION_JSON)
-        .bodyValue(signupRequestDto2)
-        .exchange()
-        .expectStatus().isCreated()
-        .expectBody(MemberSignupResponseDto.class)
-        .returnResult();
-
-    log.info("sign up response dto : {}", signupResponse.getResponseBody());
-    Long memberWithMultipleRolesId = Objects.requireNonNull(signupResponse2.getResponseBody()).getMemberId();
-
-    Member memberWithMultipleRoles = memberRepository.findById(memberWithMultipleRolesId).get();
-    assertThat(memberWithMultipleRoles.getRoles().size()).isEqualTo(userRoleSet.size());
-    assertThat(memberWithMultipleRoles.getRoles()
-        .stream().map(Role::getName).collect(Collectors.toSet())).isEqualTo(userRoleSet);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    //login test member
-    EntityExchangeResult<LoginResponseDto> loginResponse = webTestClient.post()
+    //login test member(ROLE_USER)
+    LoginResponseDto loginResponseOfRoleUser = webTestClient.post()
         .uri("/auth/login")
         .contentType(MediaType.APPLICATION_JSON)
-        .bodyValue(new LoginRequestDto(signupRequestDto.getEmail(), signupRequestDto.getPassword()))
+        .bodyValue(new LoginRequestDto(roleUserSignupRequest.getEmail(), roleUserSignupRequest.getPassword()))
         .exchange()
         .expectStatus()
         .isOk()
         .expectBody(LoginResponseDto.class)
-        .returnResult();
+        .returnResult()
+        .getResponseBody();
 
-    log.info("login response dto : {} ", loginResponse.getResponseBody());
-
-    String accessTokenWithBearer = String.format("Bearer %s", Objects.requireNonNull(loginResponse.getResponseBody()).getAccessToken());
+    String accessTokenWithBearer = String.format("Bearer %s", Objects.requireNonNull(loginResponseOfRoleUser).getAccessToken());
     String AUTHORIZATION = "Authorization";
 
-    //get test member
-    EntityExchangeResult<MemberDto> responseGetMember =
-        webTestClient.get().uri("/members/" + testUserMemberId)
+    //get test member - get memberId same with login member id
+    MemberDto memberDtoFound =
+        webTestClient.get().uri("/members/" + roleUserMemberId)
             .header(AUTHORIZATION, accessTokenWithBearer)
             .exchange()
             .expectStatus()
             .isOk()
             .expectBody(MemberDto.class)
-            .returnResult();
+            .returnResult()
+            .getResponseBody();
 
 
-    log.info("get member id : {} ", testUserMemberId);
-    log.info("found member : {}", responseGetMember.getResponseBody());
+    log.info("get member id : {} ", roleUserMemberId);
+    log.info("found member : {}", memberDtoFound);
 
-    Member memberFound = memberRepository.findById(testUserMemberId).get();
+    //compare member from response with saved member(saved when member request sign up)
+    assertThat(memberDtoFound).isNotNull();
+    assertThat(memberDtoFound.getName()).isEqualTo(savedRoleUserMember.getName());
+    assertThat(memberDtoFound.getPhone()).isEqualTo(savedRoleUserMember.getPhone());
+    assertThat(memberDtoFound.getEmail()).isEqualTo(savedRoleUserMember.getEmail());
+    assertThat(memberDtoFound.getGender()).isEqualTo(savedRoleUserMember.getGender());
+    assertThat(memberDtoFound.getMemberId()).isEqualTo(savedRoleUserMember.getMemberId());
+    assertThat(memberDtoFound.getRoles())
+        .isEqualTo(savedRoleUserMember
+            .getRoles().stream()
+            .map(role->role.getName().name())
+            .collect(Collectors.toSet()));
 
 
-    MemberDto responseBody = responseGetMember.getResponseBody();
-    assertThat(responseBody).isNotNull();
-    assertThat(responseBody.getName()).isEqualTo(memberFound.getName());
-    assertThat(responseBody.getPhone()).isEqualTo(memberFound.getPhone());
-    assertThat(responseBody.getEmail()).isEqualTo(memberFound.getEmail());
-    assertThat(responseBody.getGender()).isEqualTo(memberFound.getGender());
-    assertThat(responseBody.getMemberId()).isEqualTo(memberFound.getMemberId());
-    assertThat(responseBody.getRoles())
-        .isEqualTo(memberFound.getRoles().stream().map(role->role.getName().name()).collect(Collectors.toSet()));
+    //getMember - nonexistentMemberId - 404
+    long countAllMember = memberRepository.count();
+    long nonexistentMemberId = countAllMember + 10;
+    webTestClient.get().uri("/members/" + nonexistentMemberId)
+        .header(AUTHORIZATION, accessTokenWithBearer)
+        .exchange()
+        .expectStatus()
+        .isNotFound();
 
-    //get memberList
 
+
+
+    //get memberList - validState - return Page of selected
     int page = 1;
     int size = 10;
 
@@ -201,36 +163,45 @@ public class MemberIT {
         .expectBody()
         .jsonPath("$.totalElements").isEqualTo(countOfAllMember)
         .jsonPath("$.size").isEqualTo(size)
-        .jsonPath("$.number").isEqualTo(page - 1);//Page의 index는 0부터 시작
+        .jsonPath("$.number").isEqualTo(page - 1);//index of 'Page' starts from '0'
 
-    //update test member
-    String updatePassword = "11111111";
-    String updateName = "name123";
-    String updateEmail = "update@test.com";
-    String updatePhone = "01012381255";
+
+    //update test member - update own data with role user - 200
+    String changedPassword = "11111111";
+    String changedName = "name123";
+    String changedEmail = "update@test.com";
+    String changedPhone = "01012381255";
     MemberUpdateRequestDto updateRequestDto = new MemberUpdateRequestDto();
-    updateRequestDto.setMemberId(testUserMemberId);
-    updateRequestDto.setPassword(updatePassword);
-    updateRequestDto.setName(updateName);
-    updateRequestDto.setEmail(updateEmail);
-    updateRequestDto.setPhone(updatePhone);
+    updateRequestDto.setMemberId(roleUserMemberId);
+    updateRequestDto.setPassword(changedPassword);
+    updateRequestDto.setName(changedName);
+    updateRequestDto.setEmail(changedEmail);
+    updateRequestDto.setPhone(changedPhone);
 
-    webTestClient.put()
-        .uri("/members/" + testUserMemberId)
+    MemberDto updatedMemberDtoOfResponse = webTestClient.put()
+        .uri("/members/" + roleUserMemberId)
         .header(AUTHORIZATION, accessTokenWithBearer)
         .contentType(MediaType.APPLICATION_JSON)
         .bodyValue(updateRequestDto)
         .exchange()
         .expectStatus()
-        .isOk();
-    Member memberUpdated = memberRepository.findById(testUserMemberId).get();
-    assertThat(memberUpdated.getMemberId()).isEqualTo(testUserMemberId);
-    assertThat(memberUpdated.getName()).isEqualTo(updateName);
-    assertThat(memberUpdated.getEmail()).isEqualTo(updateEmail);
-    assertThat(memberUpdated.getPhone()).isEqualTo(updatePhone);
-    assertThat(passwordEncoder.matches(updatePassword, memberUpdated.getPassword())).isTrue();
-    //udpate other member -> fail
+        .isOk()
+        .expectBody(MemberDto.class)
+        .returnResult()
+        .getResponseBody();
 
+    Member savedRoleUserAfterUpdate = memberRepository.findById(roleUserMemberId).get();
+
+    assertThat(updatedMemberDtoOfResponse).isNotNull();
+    assertThat(updatedMemberDtoOfResponse.getMemberId()).isEqualTo(roleUserMemberId);
+    assertThat(updatedMemberDtoOfResponse.getName()).isEqualTo(changedName);
+    assertThat(updatedMemberDtoOfResponse.getEmail()).isEqualTo(changedEmail);
+    assertThat(updatedMemberDtoOfResponse.getPhone()).isEqualTo(changedPhone);
+    assertThat(passwordEncoder.matches(changedPassword, savedRoleUserAfterUpdate.getPassword())).isTrue();
+
+
+
+    //udpate other member - request Member id not same with login member id(in token) - fail (403)
     long differentMemberId = 100L;
     webTestClient.put()
         .uri("/members/" + differentMemberId)
@@ -242,7 +213,7 @@ public class MemberIT {
         .isForbidden();
 
 
-    //delete other membr -> fail
+    //delete other membr - request Member id not same with login member id(in token) - fail (403)
     webTestClient.delete()
         .uri("/members/" + differentMemberId)
         .header(AUTHORIZATION, accessTokenWithBearer)
@@ -250,9 +221,9 @@ public class MemberIT {
         .expectStatus()
         .isForbidden();
 
-    //delete test member
+    //delete - own member - success (200)
     webTestClient.delete()
-        .uri("/members/" + testUserMemberId)
+        .uri("/members/" + roleUserMemberId)
         .header(AUTHORIZATION, accessTokenWithBearer)
         .exchange()
         .expectStatus()
@@ -262,12 +233,52 @@ public class MemberIT {
   @Test
   void roleAdminCrud() {
     /*role admin*/
-    //login test admin
-    String adminEmail = "admin@test.com";
-    String adminPassword = "00000000";
-    LoginRequestDto adminLoginRequest = new LoginRequestDto(adminEmail, adminPassword);
 
-    EntityExchangeResult<LoginResponseDto> loginResponse = webTestClient.post()
+    //sign up test admin member -> set ROLE_ADMIN, ROLE_MANAGER -> requested roles assigned
+    String roleAdminEmail = "testUserWithRoles@email.com";
+    String roleAdminPassword = "00000000";
+    String roleAdminName = "testUser";
+    String roleAdminPhone = "01098761234";
+    MemberSignupRequestDto roleAdminSignupRequest = new MemberSignupRequestDto();
+    roleAdminSignupRequest.setEmail(roleAdminEmail);
+    roleAdminSignupRequest.setPassword(roleAdminPassword);
+    roleAdminSignupRequest.setName(roleAdminName);
+    roleAdminSignupRequest.setGender(Gender.MALE);
+    roleAdminSignupRequest.setPhone(roleAdminPhone);
+
+    List<Role> allRolesList = roleRepository.findAll();
+    Set<UserRole> userRoleSet = allRolesList.stream()
+        .map(Role::getName)
+        .filter(name -> name !=UserRole.ROLE_USER)
+        .collect(Collectors.toSet());
+
+    roleAdminSignupRequest.setUserRoles(userRoleSet);
+
+    MemberSignupResponseDto roleAdminSignupResponse = webTestClient.post()
+        .uri("/members")
+        .contentType(MediaType.APPLICATION_JSON)
+        .bodyValue(roleAdminSignupRequest)
+        .exchange()
+        .expectStatus().isCreated()
+        .expectBody(MemberSignupResponseDto.class)
+        .returnResult()
+        .getResponseBody();
+
+    //compare sign up request with sign up response
+    log.info("sign up response dto : {}", roleAdminSignupResponse);
+    Long roleAdminMemberId = Objects.requireNonNull(roleAdminSignupResponse).getMemberId();
+    Member savedRoleAdminMember = memberRepository.findById(roleAdminMemberId).get();
+
+    assertThat(savedRoleAdminMember.getRoles().size()).isEqualTo(userRoleSet.size());
+    assertThat(savedRoleAdminMember
+        .getRoles().stream()
+        .map(Role::getName)
+        .collect(Collectors.toSet())).isEqualTo(userRoleSet);
+
+    //login test admin
+    LoginRequestDto adminLoginRequest = new LoginRequestDto(roleAdminEmail, roleAdminPassword);
+
+    LoginResponseDto adminLoginResponse = webTestClient.post()
         .uri("/auth/login")
         .contentType(MediaType.APPLICATION_JSON)
         .bodyValue(adminLoginRequest)
@@ -275,22 +286,29 @@ public class MemberIT {
         .expectStatus()
         .isOk()
         .expectBody(LoginResponseDto.class)
-        .returnResult();
-    //get test admin
-    String accessTokenWithBearer = String.format("Bearer %s", Objects.requireNonNull(loginResponse.getResponseBody()).getAccessToken());
+        .returnResult()
+        .getResponseBody();
+
+
+    //getMember - ok
+    String accessTokenWithBearer = String.format("Bearer %s", Objects.requireNonNull(adminLoginResponse).getAccessToken());
     String AUTHORIZATION = "Authorization";
 
-    long allMemberCount = memberRepository.count();
-
-    //admin(id = 1)을 제외한 아이디 결정
-    long randomMemberId =  (long)(Math.random() * allMemberCount-1)+2;
-    System.out.println("randomMemberId = " + randomMemberId);
-    //get test member
-    webTestClient.get().uri("/members/" + randomMemberId)
+    webTestClient.get().uri("/members/" + roleAdminMemberId)
         .header(AUTHORIZATION, accessTokenWithBearer)
         .exchange()
         .expectStatus()
         .isOk();
+
+
+    //getMember - nonexistentMemberId - 404
+    long countAllMember = memberRepository.count();
+    long nonexistentMemberId = countAllMember + 10;
+    webTestClient.get().uri("/members/" + nonexistentMemberId)
+        .header(AUTHORIZATION, accessTokenWithBearer)
+        .exchange()
+        .expectStatus()
+        .isNotFound();
 
     //get memberList
     int page = 1;
@@ -304,83 +322,83 @@ public class MemberIT {
         .expectStatus()
         .isOk()
         .expectBody()
-        .jsonPath("$.totalElements").isEqualTo(allMemberCount)
+        .jsonPath("$.totalElements").isEqualTo(countAllMember)
         .jsonPath("$.size").isEqualTo(size)
         .jsonPath("$.number").isEqualTo(page - 1);//Page의 index는 0부터 시작
 
     //update test admin
-    long adminId = 1L;
 
-
-    String updatePassword = "44221133";
-    String updateName = "nameTest";
-    String updateEmail = "updateAAA@test.com";
-    String updatePhone = "01098765432";
+    String changedPassword = "44221133";
+    String changedName = "nameTest";
+    String changedEmail = "updateAAA@test.com";
+    String changedPhone = "01098765432";
     MemberUpdateRequestDto updateRequestDto = new MemberUpdateRequestDto();
-    updateRequestDto.setMemberId(randomMemberId);
-    updateRequestDto.setPassword(updatePassword);
-    updateRequestDto.setName(updateName);
-    updateRequestDto.setEmail(updateEmail);
-    updateRequestDto.setPhone(updatePhone);
+    updateRequestDto.setMemberId(roleAdminMemberId);
+    updateRequestDto.setPassword(changedPassword);
+    updateRequestDto.setName(changedName);
+    updateRequestDto.setEmail(changedEmail);
+    updateRequestDto.setPhone(changedPhone);
 
+
+    //update request = admin own data - ok (200)
     webTestClient.put()
-        .uri("/members/" + adminId)
+        .uri("/members/" + roleAdminMemberId)
         .header(AUTHORIZATION, accessTokenWithBearer)
         .contentType(MediaType.APPLICATION_JSON)
         .bodyValue(updateRequestDto)
         .exchange()
         .expectStatus()
         .isOk();
-    Member memberUpdated = memberRepository.findById(adminId).get();
+    Member memberUpdated = memberRepository.findById(roleAdminMemberId).get();
 
-    assertThat(memberUpdated.getMemberId()).isEqualTo(adminId);
-    assertThat(memberUpdated.getName()).isEqualTo(updateName);
-    assertThat(memberUpdated.getEmail()).isEqualTo(updateEmail);
-    assertThat(memberUpdated.getPhone()).isEqualTo(updatePhone);
-    assertThat(passwordEncoder.matches(updatePassword, memberUpdated.getPassword())).isTrue();
+    assertThat(memberUpdated.getMemberId()).isEqualTo(roleAdminMemberId);
+    assertThat(memberUpdated.getEmail()).isEqualTo(changedEmail);
+    assertThat(memberUpdated.getName()).isEqualTo(changedName);
+    assertThat(memberUpdated.getPhone()).isEqualTo(changedPhone);
+    assertThat(passwordEncoder.matches(changedPassword, memberUpdated.getPassword())).isTrue();
 
 
 
-    //udpate other member -> ok
-
-    String updatePassword2 = "22222222";
-    String updateName2 = "name456123";
-    String updateEmail2 = "update22@test.com";
-    String updatePhone2 = "01088888888";
-    MemberUpdateRequestDto updateRequestDto2 = new MemberUpdateRequestDto();
-    updateRequestDto2.setMemberId(randomMemberId);
-    updateRequestDto2.setPassword(updatePassword2);
-    updateRequestDto2.setName(updateName2);
-    updateRequestDto2.setEmail(updateEmail2);
-    updateRequestDto2.setPhone(updatePhone2);
+    //udpate request - other member update with admin role - ok(200)
+    long otherMemberId = 3L; //3L is other role_user member saved in db by TestCofig
+    String changedPassword2 = "22222222";
+    String changedName2 = "name456123";
+    String changedEmail2 = "update22@test.com";
+    String changedPhone2 = "01088888888";
+    MemberUpdateRequestDto updateRequestByAdmin = new MemberUpdateRequestDto();
+    updateRequestByAdmin.setMemberId(otherMemberId);
+    updateRequestByAdmin.setPassword(changedPassword2);
+    updateRequestByAdmin.setName(changedName2);
+    updateRequestByAdmin.setEmail(changedEmail2);
+    updateRequestByAdmin.setPhone(changedPhone2);
 
     webTestClient.put()
-        .uri("/members/" + randomMemberId)
+        .uri("/members/" + otherMemberId)
         .header(AUTHORIZATION, accessTokenWithBearer)
         .contentType(MediaType.APPLICATION_JSON)
-        .bodyValue(updateRequestDto2)
+        .bodyValue(updateRequestByAdmin)
         .exchange()
         .expectStatus()
         .isOk();
-    Member memberUpdated2 = memberRepository.findById(randomMemberId).get();
+    Member updatedMemberByAdmin = memberRepository.findById(otherMemberId).get();
 
-    assertThat(memberUpdated2.getMemberId()).isEqualTo(randomMemberId);
-    assertThat(memberUpdated2.getName()).isEqualTo(updateName2);
-    assertThat(memberUpdated2.getEmail()).isEqualTo(updateEmail2);
-    assertThat(memberUpdated2.getPhone()).isEqualTo(updatePhone2);
-    assertThat(passwordEncoder.matches(updatePassword2, memberUpdated2.getPassword())).isTrue();
+    assertThat(updatedMemberByAdmin.getMemberId()).isEqualTo(otherMemberId);
+    assertThat(updatedMemberByAdmin.getName()).isEqualTo(changedName2);
+    assertThat(updatedMemberByAdmin.getEmail()).isEqualTo(changedEmail2);
+    assertThat(updatedMemberByAdmin.getPhone()).isEqualTo(changedPhone2);
+    assertThat(passwordEncoder.matches(changedPassword2, updatedMemberByAdmin.getPassword())).isTrue();
 
-    //delete other membr -> ok
+    //delete other membr - ok(200)
     webTestClient.delete()
-        .uri("/members/" + randomMemberId)
+        .uri("/members/" + otherMemberId)
         .header(AUTHORIZATION, accessTokenWithBearer)
         .exchange()
         .expectStatus()
         .isOk();
 
-    //delete test admin
+    //delete test admin by self - ok(200)
     webTestClient.delete()
-        .uri("/members/" + adminId)
+        .uri("/members/" + roleAdminMemberId)
         .header(AUTHORIZATION, accessTokenWithBearer)
         .exchange()
         .expectStatus()

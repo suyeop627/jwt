@@ -5,11 +5,11 @@ import com.study.securitywithjwt.domain.RefreshToken;
 import com.study.securitywithjwt.domain.Role;
 import com.study.securitywithjwt.dto.LoginRequestDto;
 import com.study.securitywithjwt.dto.LoginResponseDto;
-import com.study.securitywithjwt.dto.MemberInfoInToken;
+import com.study.securitywithjwt.dto.LoginMemberInfo;
 import com.study.securitywithjwt.exception.JwtAuthenticationException;
 import com.study.securitywithjwt.exception.JwtExceptionType;
 import com.study.securitywithjwt.jwt.JwtUtils;
-import com.study.securitywithjwt.security.user.MemberUserDetails;
+import com.study.securitywithjwt.security.user.MemberDetails;
 import com.study.securitywithjwt.utils.member.Gender;
 import com.study.securitywithjwt.utils.member.UserRole;
 import io.jsonwebtoken.Claims;
@@ -38,16 +38,12 @@ import static org.mockito.Mockito.times;
 
 @ExtendWith(MockitoExtension.class)
 class AuthenticationServiceTest {
-
   @Mock
   AuthenticationManager authenticationManager;
-
   @Mock
   JwtUtils jwtUtils;
-
   @Mock
   RefreshTokenService refreshTokenService;
-
   @InjectMocks //@Mock으로 지정한 클래스들 주입해서 테스트할 클래스의 인스턴스 생성해줌
   AuthenticationService authenticationService;
 
@@ -71,23 +67,25 @@ class AuthenticationServiceTest {
           .regdate(LocalDateTime.now())
           .build();
 
-      MemberUserDetails memberUserDetails = new MemberUserDetails(member);
+      MemberDetails memberDetails = new MemberDetails(member);
 
       authentication
-          = new UsernamePasswordAuthenticationToken(memberUserDetails, null);
+          = new UsernamePasswordAuthenticationToken(memberDetails, null);
     }
 
     @Test
     void login_tokenExistInDB_callDeleteRefreshTokenByIdAndReturnLoginResponseDto() {
       //given
       given(authenticationManager.authenticate(any())).willReturn(authentication);
-      given(jwtUtils.issueToken(any(MemberInfoInToken.class), anyString())).willReturn("createdAccessTokenForTest", "createdRefreshTokenForTest");
+      given(jwtUtils.issueToken(any(LoginMemberInfo.class), anyString())).willReturn("createdAccessTokenForTest", "createdRefreshTokenForTest");
       RefreshToken refreshToken = new RefreshToken();
       refreshToken.setId(1L);
       given(refreshTokenService.selectRefreshTokenByMemberEmail(anyString())).willReturn(Optional.of(refreshToken));
 
+      //when
       LoginResponseDto loginResponseDto = authenticationService.login(requestDto);
 
+      //then
       assertThat(loginResponseDto).isNotNull()
           .hasFieldOrPropertyWithValue("email", requestDto.getEmail())
           .hasFieldOrPropertyWithValue("name", member.getName())
@@ -103,9 +101,9 @@ class AuthenticationServiceTest {
     void login_nonexistentTokenInDB_returnLoginResponseDto() {
       //given
       given(authenticationManager.authenticate(any())).willReturn(authentication);
-      given(jwtUtils.issueToken(any(MemberInfoInToken.class), anyString())).willReturn("createdAccessTokenForTest", "createdRefreshTokenForTest");
-
+      given(jwtUtils.issueToken(any(LoginMemberInfo.class), anyString())).willReturn("createdAccessTokenForTest", "createdRefreshTokenForTest");
       given(refreshTokenService.selectRefreshTokenByMemberEmail(anyString())).willReturn(Optional.of(new RefreshToken()));
+
       //when
       LoginResponseDto loginResponseDto = authenticationService.login(requestDto);
       //then
@@ -134,11 +132,11 @@ class AuthenticationServiceTest {
             "memberId", 1L))
         .build();
 
-    System.out.println("claims = " + claims);
-    given(jwtUtils.getClaimsFromRefreshToken(anyString())).willReturn(claims);
-    given(jwtUtils.issueToken(any(MemberInfoInToken.class), anyString())).willReturn("re_created_accessToken");
+    given(jwtUtils.extractClaimsFromRefreshToken(anyString())).willReturn(claims);
+    given(jwtUtils.issueToken(any(LoginMemberInfo.class), anyString())).willReturn("re_created_accessToken");
+
     //when
-    LoginResponseDto loginResponseDto = authenticationService.authenticateWithRefreshToken(refreshToken);
+    LoginResponseDto loginResponseDto = authenticationService.reAuthenticateWithRefreshToken(refreshToken);
 
     //then
     assertThat(loginResponseDto).isNotNull()
@@ -152,10 +150,10 @@ class AuthenticationServiceTest {
   void reIssueAccessToken_refreshTokenExpired_throwJwtExceptionWithHeader() {
     //given
     String expiredRefreshToken = "expired_refresh_token";
-    given(jwtUtils.getClaimsFromRefreshToken(anyString())).willThrow(ExpiredJwtException.class);
+    given(jwtUtils.extractClaimsFromRefreshToken(anyString())).willThrow(ExpiredJwtException.class);
 
     //when, then
-    assertThatThrownBy(() -> authenticationService.authenticateWithRefreshToken(expiredRefreshToken))
+    assertThatThrownBy(() -> authenticationService.reAuthenticateWithRefreshToken(expiredRefreshToken))
         .isInstanceOf(JwtAuthenticationException.class).hasMessage(JwtExceptionType.EXPIRED_REFRESH_TOKEN.getMessage());
 
     then(refreshTokenService).should(times(1)).deleteRefreshTokenByToken(expiredRefreshToken);

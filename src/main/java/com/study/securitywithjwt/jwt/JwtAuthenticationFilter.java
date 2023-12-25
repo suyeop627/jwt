@@ -4,6 +4,7 @@ import com.study.securitywithjwt.exception.JwtAuthenticationException;
 import com.study.securitywithjwt.exception.JwtExceptionType;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.security.SignatureException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,22 +17,20 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-
-/*jwt 인증처리
- * Authentication이 있는지 ?
- * Token이 있는지?
- *   *토큰은 유효한지
- * */
+//Jwt 인증 처리 필터
+//요청 헤더에 토큰이 없는 경우 - 남아있는 필터로 넘어감
+//요청 헤더에 토큰이 있는 경우 - AuthenticationProvider를 통해 인증 처리
+//인증 실패시 AuthenticationEntryPoint 를 호출하여, 인증 실패 응답.
+//
 @RequiredArgsConstructor
 @Configuration
 @Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
   private final JwtAuthenticationProvider jwtAuthenticationProvider;
 
-  /*
-  * jwt 관련 예외가 발생하더라도 POST /error로 리다이렉트 함.
-  * /error에 리다이렉트 될 경우, header에 토큰을 포함하지 않으므로 항상 InsufficentAuthetnication 발생
-  * 예외 응답을 세분화 하기 위해, jwt 관련 에러 발생 시에는 entrypoint에서 commence를 직접 호출*/
+  // jwt 관련 예외가 발생하더라도 POST /error로 리다이렉트 함.
+  // '/error'에 리다이렉트 될 경우, Authentication 이 ANONYMOUS 로 지정되어, '항상' InsufficentAuthetnication 발생
+  // 예외 응답을 세분화 하기 위해, jwt 관련 에러 발생 시에는 entrypoint에서 commence를 직접 호출
   private final AuthenticationEntryPoint authenticationEntryPoint;
 
   @Override
@@ -41,9 +40,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     log.info("JwtAuthenticationFilter activated");
 
-    //access token이 필요 없는 경우(refresh token으로 처리되거나 token을 발급 받기 위한 요청)
-    if (request.getRequestURI().equals("/auth/refresh") ||request.getRequestURI().equals("/auth/login")) {
-      log.info("JwtAuthenticationFilter passed, {} ", request.getRequestURI());
+    //access token이 필요 없는 경우 필터를 통과함. (access token이 만료되어 refresh token을 body에 담아 요청하는 경우.)
+    if (request.getRequestURI().equals("/auth/refresh")) {
+      log.info("JwtAuthenticationFilter passed, request uri: {} ", request.getRequestURI());
       filterChain.doFilter(request, response);
       return;
     }
@@ -51,15 +50,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     try {
       String token = getTokenFromRequest(request);
       if(token==null){
-        log.info("token is null, call filterChain.doFilter()");
+        log.info("Request header does not contains token, proceeding remaining filters");
         filterChain.doFilter(request, response);
         return;
       }
 
       JwtAuthenticationToken unAuthenticatedToken = new JwtAuthenticationToken(token);
-
+      log.info("Attempting to obtain Authentication by JwtAuthenticationProvider");
       //principal -> memberInfoDto
       JwtAuthenticationToken authenticatedToken = jwtAuthenticationProvider.authenticate(unAuthenticatedToken);
+      log.info("Authentication for member(memberId: {}) generated. Authentication type: {}, principal: {}",
+          authenticatedToken.getMemberId(),authenticatedToken.getClass(), authenticatedToken.getPrincipal());
 
       SecurityContextHolder.getContext().setAuthentication(authenticatedToken);
 
@@ -74,16 +75,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     } catch (MalformedJwtException e) {
       callAuthenticationEntryPoint(request, response, JwtExceptionType.INVALID_TOKEN);
 
+    } catch (SignatureException e){
+      callAuthenticationEntryPoint(request, response, JwtExceptionType.INVALID_SIGNATURE);
+
     } catch (Exception e){
-      log.error("error occurred in jwtAuthenticationFilter");
-      log.error("exception message : {}", e.getMessage());
+      log.error("Unspecified exception occurred while parsing the token", e);
       e.printStackTrace();
-
-      request.setAttribute("exception", JwtExceptionType.UNKNOWN_ERROR.getCode());
-      throw new JwtAuthenticationException("throw malformed token exception", JwtExceptionType.UNKNOWN_ERROR);
+      callAuthenticationEntryPoint(request, response, JwtExceptionType.UNKNOWN_ERROR);
     }
-
   }
+  //요청 헤더에 토큰 유무를 확인하여, null 또는 토큰을 반환.
   private String getTokenFromRequest(HttpServletRequest request) {
     String authorizationHeader = request.getHeader("Authorization");
     if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
@@ -91,8 +92,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
     return authorizationHeader.split(" ")[1];
   }
+  //토큰 파싱과정에서 예외가 발생한 경우, AuthenticationEntryPoint를 호출하여, 에외 처리 응답을 위임함.
   private void callAuthenticationEntryPoint(HttpServletRequest request, HttpServletResponse response, JwtExceptionType jwtExceptionType) throws IOException, ServletException {
-    log.error("exception {} thrown. {}",jwtExceptionType.getCode(), jwtExceptionType.getMessage());
+    log.error(jwtExceptionType.getMessage());
     JwtAuthenticationException exception = new JwtAuthenticationException(jwtExceptionType);
     authenticationEntryPoint.commence(request, response,exception);
   }

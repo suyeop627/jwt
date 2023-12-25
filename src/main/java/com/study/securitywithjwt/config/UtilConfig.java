@@ -16,15 +16,13 @@ import java.util.Set;
 
 //  애플리케이션 실행 시, 기본적인 데이터를 DB에 저장하기 위한 클래스
 //  ROLE 3가지(USER, MANAGER, ADMIN)은 항상 DB에 존재해야 함.
-//  member는  테스트 용 사용자 생성 목적.
+//  기본관리자 계정 1개 생성
 @Configuration
 public class UtilConfig {
   private final PasswordEncoder passwordEncoder;
-
   public UtilConfig(PasswordEncoder passwordEncoder) {
     this.passwordEncoder = passwordEncoder;
   }
-
   @Bean
   public CommandLineRunner insertRoles(RoleRepository roleRepository) {
     return args -> {

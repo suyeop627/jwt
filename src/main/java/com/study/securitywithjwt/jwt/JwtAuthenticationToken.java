@@ -1,11 +1,12 @@
 package com.study.securitywithjwt.jwt;
 
-import com.study.securitywithjwt.dto.MemberInfoInToken;
+import com.study.securitywithjwt.dto.LoginMemberInfo;
 import lombok.Setter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 
 import java.util.Collection;
+//Jwt를 사용하여 인증을 시도할 경우의 Authentication 객체
 @Setter
 public class JwtAuthenticationToken extends AbstractAuthenticationToken {
   private final Object principal;
@@ -39,7 +40,7 @@ public class JwtAuthenticationToken extends AbstractAuthenticationToken {
   }
 
   public Long getMemberId(){
-    MemberInfoInToken principalOfAuthenticationToken = (MemberInfoInToken) principal;
+    LoginMemberInfo principalOfAuthenticationToken = (LoginMemberInfo) principal;
     return principalOfAuthenticationToken.getMemberId();
   }
 
