@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static com.study.securitywithjwt.utils.RequestHandlerUtils.getHttpMethodAndURI;
+
 public class ControllerUtils {
   //controller에서 바인딩 된 에러가 있을 경우 처리
 
@@ -21,7 +23,7 @@ public class ControllerUtils {
     if (bindingResult.hasErrors()) {
       List<FieldError> fieldErrors = bindingResult.getFieldErrors();
       Set<ErrorDto> errorDtoSet = fieldErrors.stream()
-          .map(error -> new ErrorDto(request.getRequestURI(), error.getDefaultMessage(), HttpStatus.BAD_REQUEST.value(), LocalDateTime.now()))
+          .map(error -> new ErrorDto(getHttpMethodAndURI(request), error.getDefaultMessage(), HttpStatus.BAD_REQUEST.value(), LocalDateTime.now()))
           .collect(Collectors.toSet());
       return ResponseEntity.badRequest().body(errorDtoSet);
     }

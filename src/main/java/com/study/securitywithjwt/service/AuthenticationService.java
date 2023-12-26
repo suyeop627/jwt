@@ -126,19 +126,6 @@ public class AuthenticationService {
         .refreshToken(refreshToken)
         .build();
   }
-
-  //Claims에서 회원정보를 추출하여, LoginMemberInfo 반환
-  private LoginMemberInfo generateLoginMemberInfoFromClaims(Claims claimsFromRefreshToken) {
-    List<String> roleFromClaims = (List<String>) claimsFromRefreshToken.get("roles");
-
-    return LoginMemberInfo.builder()
-        .memberId(claimsFromRefreshToken.get("memberId", Long.class))
-        .email(claimsFromRefreshToken.getSubject())
-        .name(claimsFromRefreshToken.get("name", String.class))
-        .roles(new HashSet<>(roleFromClaims))
-        .build();
-  }
-
   //refresh token에서 추출한 클레임을 반환
   private Claims getClaimsOfRefreshToken(String refreshToken) {
     Claims claimsOfRefreshToken = null;
@@ -159,6 +146,17 @@ public class AuthenticationService {
       deleteRefreshTokenAndThrow(JwtExceptionType.UNKNOWN_ERROR, refreshToken);
     }
     return claimsOfRefreshToken;
+  }
+  //Claims에서 회원정보를 추출하여, LoginMemberInfo 반환
+  private LoginMemberInfo generateLoginMemberInfoFromClaims(Claims claimsFromRefreshToken) {
+    List<String> roleFromClaims = (List<String>) claimsFromRefreshToken.get("roles");
+
+    return LoginMemberInfo.builder()
+        .memberId(claimsFromRefreshToken.get("memberId", Long.class))
+        .email(claimsFromRefreshToken.getSubject())
+        .name(claimsFromRefreshToken.get("name", String.class))
+        .roles(new HashSet<>(roleFromClaims))
+        .build();
   }
 
   //전달받은 refresh token을 db에서 삭제하고, JwtException을 던짐

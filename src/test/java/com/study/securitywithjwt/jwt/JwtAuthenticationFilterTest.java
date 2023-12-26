@@ -12,6 +12,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpMethod;
 
 import java.io.IOException;
 
@@ -44,7 +45,8 @@ class JwtAuthenticationFilterTest {
   @Test
   void doFilterInternal_requestForRefreshToken_passFilter() throws ServletException, IOException {
     // Given
-    given(request.getRequestURI()).willReturn("/auth/refresh");
+    given(request.getRequestURI()).willReturn("/auth");
+    given(request.getMethod()).willReturn(HttpMethod.PUT.name());
 
     // When
     jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
@@ -71,7 +73,7 @@ class JwtAuthenticationFilterTest {
   @Test
   void doFilterInternal_expiredToken_callAuthenticationEntryPoint() throws ServletException, IOException {
     // Given
-    given(request.getRequestURI()).willReturn("/api");
+    given(request.getRequestURI()).willReturn("/members");
     given(request.getHeader("Authorization")).willReturn("Bearer expired-token");
     given(jwtAuthenticationProvider.authenticate(any(JwtAuthenticationToken.class)))
         .willThrow(new ExpiredJwtException(null, null,"throw expired jwt exception"));

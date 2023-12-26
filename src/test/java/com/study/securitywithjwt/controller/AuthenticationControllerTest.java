@@ -39,8 +39,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.times;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 
 @ExtendWith(MockitoExtension.class)
 @WebMvcTest(AuthenticationController.class)
@@ -74,7 +73,7 @@ public class AuthenticationControllerTest {
     given(authenticationService.login(loginRequestDto)).willReturn(expectedLoginResponse);
 
     // When
-    ResultActions response = mockMvc.perform(post("/auth/login")
+    ResultActions response = mockMvc.perform(post("/auth")
         .contentType(MediaType.APPLICATION_JSON)
         .content(objectMapper.writeValueAsString(loginRequestDto)));
     //then
@@ -98,12 +97,12 @@ public class AuthenticationControllerTest {
       given(authenticationService.login(loginRequestDto)).willReturn(loginResponseDto);
 
       List<ErrorDto> expectedErrorDto = Arrays.asList(
-          new ErrorDto("/auth/login", "must be a well-formed email address", 400, LocalDateTime.now()),
-          new ErrorDto("/auth/login", "password size must be between 8 and 16", 400, LocalDateTime.now())
+          new ErrorDto("POST /auth", "must be a well-formed email address", 400, LocalDateTime.now()),
+          new ErrorDto("POST /auth", "password size must be between 8 and 16", 400, LocalDateTime.now())
       );
 
       // When
-      ResultActions response = mockMvc.perform(post("/auth/login")
+      ResultActions response = mockMvc.perform(post("/auth")
           .contentType(MediaType.APPLICATION_JSON)
           .content(objectMapper.writeValueAsString(loginRequestDto)));
       //then
@@ -124,10 +123,10 @@ public class AuthenticationControllerTest {
 
       given(authenticationService.login(loginRequestDto)).willReturn(loginResponseDto);
 
-      ErrorDto expectedErrorDto = new ErrorDto("/auth/login", "must be a well-formed email address", 400, LocalDateTime.now());
+      ErrorDto expectedErrorDto = new ErrorDto("POST /auth", "must be a well-formed email address", 400, LocalDateTime.now());
 
       // when
-      ResultActions response = mockMvc.perform(post("/auth/login")
+      ResultActions response = mockMvc.perform(post("/auth")
           .contentType(MediaType.APPLICATION_JSON)
           .content(objectMapper.writeValueAsString(loginRequestDto)));
 
@@ -146,10 +145,10 @@ public class AuthenticationControllerTest {
       LoginResponseDto loginResponseDto = new LoginResponseDto("accessToken", "refreshToken", loginRequestDto.getEmail(), "testName");
       given(authenticationService.login(loginRequestDto)).willReturn(loginResponseDto);
 
-      ErrorDto expectedErrorDto = new ErrorDto("/auth/login", "password size must be between 8 and 16", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
+      ErrorDto expectedErrorDto = new ErrorDto("POST /auth", "password size must be between 8 and 16", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
 
       //when
-      ResultActions response = mockMvc.perform(post("/auth/login")
+      ResultActions response = mockMvc.perform(post("/auth")
           .contentType(MediaType.APPLICATION_JSON)
           .content(objectMapper.writeValueAsString(loginRequestDto)));
 
@@ -180,7 +179,7 @@ public class AuthenticationControllerTest {
       given(authenticationService.reAuthenticateWithRefreshToken(anyString())).willReturn(expectedLoginResponse);
 
       //when
-      ResultActions response = mockMvc.perform(post("/auth/refresh")
+      ResultActions response = mockMvc.perform(put("/auth")
           .contentType(MediaType.APPLICATION_JSON)
           .content(objectMapper.writeValueAsString(refreshTokenDtoForRequest)));
 
@@ -203,9 +202,9 @@ public class AuthenticationControllerTest {
 
       given(refreshTokenService.selectRefreshTokenByTokenValue(anyString())).willReturn(Optional.empty());
 
-      ErrorDto expectedErrorDto = new ErrorDto("/auth/refresh", "Token does not exist in the database. Token: "+refreshTokenDtoForRequest.getToken(), HttpStatus.NOT_FOUND.value(), LocalDateTime.now());
+      ErrorDto expectedErrorDto = new ErrorDto("PUT /auth", "Token does not exist in the database. Token: "+refreshTokenDtoForRequest.getToken(), HttpStatus.NOT_FOUND.value(), LocalDateTime.now());
       //when
-      ResultActions response = mockMvc.perform(post("/auth/refresh")
+      ResultActions response = mockMvc.perform(put("/auth")
           .contentType(MediaType.APPLICATION_JSON)
           .content(objectMapper.writeValueAsString(refreshTokenDtoForRequest)));
 
@@ -230,10 +229,10 @@ public class AuthenticationControllerTest {
           .willThrow(new JwtAuthenticationException(JwtExceptionType.EXPIRED_REFRESH_TOKEN.getMessage(),
               JwtExceptionType.EXPIRED_REFRESH_TOKEN));
 
-      ErrorDto expectedErrorDto = new ErrorDto("/auth/refresh", JwtExceptionType.EXPIRED_REFRESH_TOKEN.getMessage(), HttpStatus.UNAUTHORIZED.value(), LocalDateTime.now());
+      ErrorDto expectedErrorDto = new ErrorDto("PUT /auth", JwtExceptionType.EXPIRED_REFRESH_TOKEN.getMessage(), HttpStatus.UNAUTHORIZED.value(), LocalDateTime.now());
 
       //when
-      ResultActions response = mockMvc.perform(post("/auth/refresh")
+      ResultActions response = mockMvc.perform(put("/auth")
           .contentType(MediaType.APPLICATION_JSON)
           .content(objectMapper.writeValueAsString(refreshTokenDtoForRequest)));
 
@@ -243,7 +242,7 @@ public class AuthenticationControllerTest {
           .andExpect(MockMvcResultMatchers.jsonPath("$.message", Matchers.is(expectedErrorDto.getMessage())))
           .andExpect(MockMvcResultMatchers.jsonPath("$.statusCode", Matchers.is(expectedErrorDto.getStatusCode())))
           .andExpect(MockMvcResultMatchers.header().exists(JWT_EXCEPTION_HEADER))
-          .andExpect(MockMvcResultMatchers.header().string(JWT_EXCEPTION_HEADER, JwtExceptionType.EXPIRED_REFRESH_TOKEN.getCode()))
+          .andExpect(MockMvcResultMatchers.header().string(JWT_EXCEPTION_HEADER, JwtExceptionType.EXPIRED_REFRESH_TOKEN.getStatus()))
           .andDo(MockMvcResultHandlers.print());
     }
   }
@@ -264,7 +263,7 @@ public class AuthenticationControllerTest {
       given(argumentResolver.resolveArgument(any(), any(), any(), any())).willReturn(loggedInMember);
 
       //when
-      ResultActions response = mockMvc.perform(delete("/auth/logout")
+      ResultActions response = mockMvc.perform(delete("/auth")
           .header("Authorization", "token"));
       //then
       response.andExpect(MockMvcResultMatchers.status().isOk())

@@ -12,11 +12,15 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+
+import static com.study.securitywithjwt.utils.RequestHandlerUtils.getHttpMethodAndURI;
+
 //Jwt 인증 처리 필터
 //요청 헤더에 토큰이 없는 경우 - 남아있는 필터로 넘어감
 //요청 헤더에 토큰이 있는 경우 - AuthenticationProvider를 통해 인증 처리
@@ -41,8 +45,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     log.info("JwtAuthenticationFilter activated");
 
     //access token이 필요 없는 경우 필터를 통과함. (access token이 만료되어 refresh token을 body에 담아 요청하는 경우.)
-    if (request.getRequestURI().equals("/auth/refresh")) {
-      log.info("JwtAuthenticationFilter passed, request uri: {} ", request.getRequestURI());
+    if (request.getRequestURI().equals("/auth") && request.getMethod().equals(HttpMethod.PUT.name())) {
+      log.info("JwtAuthenticationFilter passed, request uri: {} ",getHttpMethodAndURI(request));
       filterChain.doFilter(request, response);
       return;
     }

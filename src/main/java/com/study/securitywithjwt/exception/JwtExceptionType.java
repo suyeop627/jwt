@@ -12,14 +12,12 @@ public enum JwtExceptionType {
 
   INVALID_SIGNATURE("INVALID_SIGNATURE", "Token contains Invalid signature");
   @Getter
-  private final String code;
+  private final String status;
   @Getter
   private final String message;
 
-  JwtExceptionType(String code, String message) {
-    this.code = code;
+  JwtExceptionType(String status, String message) {
+    this.status = status;
     this.message = message;
   }
-
-
 }

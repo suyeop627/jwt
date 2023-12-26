@@ -94,7 +94,7 @@ public class MemberIT {
 
     //login test member(ROLE_USER)
     LoginResponseDto loginResponseOfRoleUser = webTestClient.post()
-        .uri("/auth/login")
+        .uri("/auth")
         .contentType(MediaType.APPLICATION_JSON)
         .bodyValue(new LoginRequestDto(roleUserSignupRequest.getEmail(), roleUserSignupRequest.getPassword()))
         .exchange()
@@ -279,7 +279,7 @@ public class MemberIT {
     LoginRequestDto adminLoginRequest = new LoginRequestDto(roleAdminEmail, roleAdminPassword);
 
     LoginResponseDto adminLoginResponse = webTestClient.post()
-        .uri("/auth/login")
+        .uri("/auth")
         .contentType(MediaType.APPLICATION_JSON)
         .bodyValue(adminLoginRequest)
         .exchange()

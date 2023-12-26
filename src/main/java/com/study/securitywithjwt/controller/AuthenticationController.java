@@ -34,7 +34,7 @@ public class AuthenticationController {
 //request         http servlet request
 //로그인 성공시 accessToken, refreshToken, email, name을 담은 LoginResponseDto 반환
 //로그인 실패시 path, message, code, localDateTime을 담은 errorDto 반환
-  @PostMapping("login")
+  @PostMapping
   public ResponseEntity<?> login(@RequestBody @Valid LoginRequestDto loginRequestDto, BindingResult bindingResult, HttpServletRequest request) {
     ResponseEntity<Set<ErrorDto>> errorDtoSet = ControllerUtils.getErrorResponseFromBindingResult(bindingResult, request);
     if (errorDtoSet != null) return errorDtoSet;
@@ -48,7 +48,7 @@ public class AuthenticationController {
   //access token 재 발급
   //refresh token을 기반으로, 회원 기본 정보 확인 후, access token 발급
   //refresh token이 만료된 경우, 응답 헤더에 JwtException: REFRESH_TOKEN_EXPIRED 를 추가해서 응답.
-  @PostMapping("/refresh")
+  @PutMapping
   public ResponseEntity<?> reIssueAccessToken(@RequestBody RefreshTokenDto refreshTokenDto) {
 
     log.info("Attempting to renew access token using the refresh token. Token: {}", refreshTokenDto.getToken());
@@ -67,7 +67,7 @@ public class AuthenticationController {
 
   //로그 아웃
   //db에 저장된 refresh token 삭제
-  @DeleteMapping("/logout")
+  @DeleteMapping
   public ResponseEntity<Void> logout(@TokenToMemberInfo LoginMemberInfo loggedInMember) {
     log.info("Logout called. Member ID: {}", loggedInMember.getMemberId());
     refreshTokenService.deleteRefreshTokenByMemberId(loggedInMember.getMemberId());

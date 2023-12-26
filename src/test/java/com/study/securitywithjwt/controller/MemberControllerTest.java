@@ -119,9 +119,9 @@ class MemberControllerTest {
       invalidEmailPasswordNameRequest.setName("1");
 
       List<ErrorDto> expectedErrorDtoList = Arrays.asList(
-          new ErrorDto("/members", "must be a well-formed email address", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now()),
-          new ErrorDto("/members", "password size must be between 8 and 16", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now()),
-          new ErrorDto("/members", "name size must be between 2 and 16", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now())
+          new ErrorDto("POST /members", "must be a well-formed email address", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now()),
+          new ErrorDto("POST /members", "password size must be between 8 and 16", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now()),
+          new ErrorDto("POST /members", "name size must be between 2 and 16", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now())
       );
 
       // When
@@ -147,7 +147,7 @@ class MemberControllerTest {
       MemberSignupRequestDto passwordLessThan8Request = getValidSignupRequestDto();
       passwordLessThan8Request.setPassword("2");
 
-      ErrorDto expectedErrorDto = new ErrorDto("/members", "password size must be between 8 and 16", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
+      ErrorDto expectedErrorDto = new ErrorDto("POST /members", "password size must be between 8 and 16", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
 
       // When
       ResultActions response = mockMvc.perform(post("/members")
@@ -166,7 +166,7 @@ class MemberControllerTest {
       MemberSignupRequestDto nameLessThen2Request = getValidSignupRequestDto();
       nameLessThen2Request.setName("2");
 
-      ErrorDto expectedErrorDto = new ErrorDto("/members", "name size must be between 2 and 16", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
+      ErrorDto expectedErrorDto = new ErrorDto("POST /members", "name size must be between 2 and 16", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
       // When
       ResultActions response = mockMvc.perform(post("/members")
           .contentType(MediaType.APPLICATION_JSON)
@@ -186,7 +186,7 @@ class MemberControllerTest {
       MemberSignupRequestDto invalidEmailRequest = getValidSignupRequestDto();
       invalidEmailRequest.setEmail("1");
 
-      ErrorDto expectedErrorDto = new ErrorDto("/members", "must be a well-formed email address", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
+      ErrorDto expectedErrorDto = new ErrorDto("POST /members", "must be a well-formed email address", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
 
       // When
       ResultActions response = mockMvc.perform(post("/members")
@@ -207,7 +207,7 @@ class MemberControllerTest {
       invalidPhoneRequest.setPhone("11000000000");
 
 
-      ErrorDto expectedErrorDto = new ErrorDto("/members", "must be well-formed phone number", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
+      ErrorDto expectedErrorDto = new ErrorDto("POST /members", "must be well-formed phone number", HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
 
       // When
       ResultActions response = mockMvc.perform(post("/members")

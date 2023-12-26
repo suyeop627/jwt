@@ -16,6 +16,9 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
+
+import static com.study.securitywithjwt.utils.RequestHandlerUtils.getHttpMethodAndURI;
+
 //Controller 에서 발생하는 예외 처리 클래스
 @RestControllerAdvice
 @Slf4j
@@ -80,7 +83,7 @@ public class ControllerExceptionHandler {
 
   private ErrorDto createErrorDto(HttpServletRequest request, Exception e, int errorCode){
     ErrorDto errorDto = ErrorDto.builder()
-        .path(request.getRequestURI())
+        .path(getHttpMethodAndURI(request))
         .message(e.getMessage())
         .localDateTime(LocalDateTime.now())
         .statusCode(errorCode)
@@ -90,10 +93,10 @@ public class ControllerExceptionHandler {
     return errorDto;
   }
   private ResponseEntity<ErrorDto> createExpiredJwtResponse(ErrorDto errorDto, JwtExceptionType jwtExceptionType) {
-    log.error("{}. Exception code attached to header. JwtException: {}", jwtExceptionType.getMessage(), jwtExceptionType.getCode());
+    log.error("{}. Exception code attached to header. JwtException: {}", jwtExceptionType.getMessage(), jwtExceptionType.getStatus());
     return ResponseEntity
         .status(HttpStatus.UNAUTHORIZED)
-        .header(JWT_EXCEPTION_HEADER, jwtExceptionType.getCode()) //EXPIRED_ACCESS_TOKEN or EXPIRED_REFRESH_TOKEN
+        .header(JWT_EXCEPTION_HEADER, jwtExceptionType.getStatus()) //EXPIRED_ACCESS_TOKEN or EXPIRED_REFRESH_TOKEN
         .body(errorDto);
   }
 }

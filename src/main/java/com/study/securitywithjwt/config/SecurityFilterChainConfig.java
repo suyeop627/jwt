@@ -50,7 +50,9 @@ public class SecurityFilterChainConfig {
         .authorizeHttpRequests(httpRequest ->
             httpRequest
                 .requestMatchers(CorsUtils::isPreFlightRequest).permitAll()
-                .requestMatchers(HttpMethod.POST, "/members", "/auth/login", "/auth/refresh")
+                .requestMatchers(HttpMethod.POST, "/members", "/auth")
+                .permitAll()
+                .requestMatchers(HttpMethod.PUT, "/auth")
                 .permitAll()
                 .requestMatchers(HttpMethod.GET, "/members")
                 .authenticated()

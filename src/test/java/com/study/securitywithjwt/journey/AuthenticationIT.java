@@ -213,20 +213,20 @@ public class AuthenticationIT {
 
 
     //logout - invalid access token - 401
-    webTestClient.delete().uri("/auth/logout")
+    webTestClient.delete().uri("/auth")
         .header("Authorization", String.format("Bearer %s", "asdf"))
         .exchange()
         .expectStatus()
         .isUnauthorized();
 
     //logout - no access token - 401
-    webTestClient.delete().uri("/auth/logout")
+    webTestClient.delete().uri("/auth")
         .exchange()
         .expectStatus()
         .isUnauthorized();
 
     //logout - valid access token - 401
-    webTestClient.delete().uri("/auth/logout")
+    webTestClient.delete().uri("/auth")
         .header("Authorization", String.format("Bearer %s", accessToken))
         .exchange()
         .expectStatus()
@@ -243,7 +243,7 @@ public class AuthenticationIT {
 
   private WebTestClient.ResponseSpec postLoginRequestWithLoginRequestDto(LoginRequestDto loginRequestDto) {
     return webTestClient.post()
-        .uri("/auth/login")
+        .uri("/auth")
         .bodyValue(loginRequestDto)
         .exchange();
   }
@@ -282,7 +282,7 @@ public class AuthenticationIT {
 
       LoginResponseDto loginResponseWithExpiredAccessToken =
           webTestClient.post()
-              .uri("/auth/login")
+              .uri("/auth")
               .contentType(MediaType.APPLICATION_JSON)
               .bodyValue(loginRequestDto)
               .exchange()
@@ -303,7 +303,7 @@ public class AuthenticationIT {
           .expectStatus()
           .isUnauthorized()
           .expectHeader()
-          .valueEquals(JWT_EXCEPTION_HEADER, JwtExceptionType.EXPIRED_ACCESS_TOKEN.getCode())
+          .valueEquals(JWT_EXCEPTION_HEADER, JwtExceptionType.EXPIRED_ACCESS_TOKEN.getStatus())
           .expectBody(ErrorDto.class)
           .returnResult()
           .getResponseBody();
@@ -321,7 +321,7 @@ public class AuthenticationIT {
 
       //refresh access token - request with refresh token in http body -> reIssue access token
       LoginResponseDto loginResponseAfterRefresh =
-          webTestClient.post().uri("/auth/refresh")
+          webTestClient.put().uri("/auth")
               .contentType(MediaType.APPLICATION_JSON)
               .bodyValue(refreshTokenDto)
               .exchange()
@@ -347,7 +347,7 @@ public class AuthenticationIT {
           .exchange()
           .expectStatus()
           .isOk();
-      webTestClient.delete().uri("/auth/logout")
+      webTestClient.delete().uri("/auth")
           .header("Authorization", reIssuedAccessTokenWithBearer)
           .exchange()
           .expectStatus()
@@ -366,7 +366,7 @@ public class AuthenticationIT {
       LoginRequestDto loginRequestDto = new LoginRequestDto(signupRequestDto.getEmail(), signupRequestDto.getPassword());
 
       LoginResponseDto loginResponseWithExpiredTokens =
-          webTestClient.post().uri("/auth/login")
+          webTestClient.post().uri("/auth")
               .contentType(MediaType.APPLICATION_JSON)
               .bodyValue(loginRequestDto)
               .exchange()
@@ -389,7 +389,7 @@ public class AuthenticationIT {
           .expectStatus()
           .isUnauthorized()
           .expectHeader()
-          .valueEquals(JWT_EXCEPTION_HEADER, JwtExceptionType.EXPIRED_ACCESS_TOKEN.getCode())
+          .valueEquals(JWT_EXCEPTION_HEADER, JwtExceptionType.EXPIRED_ACCESS_TOKEN.getStatus())
           .expectBody(ErrorDto.class);
 
       log.info("refreshToken count1 : " + refreshTokenRepository.count());
@@ -397,15 +397,15 @@ public class AuthenticationIT {
       //refresh access token ->  401 & jwt exception (refresh token expired) in response header
       RefreshTokenDto expiredRefreshTokenDto = new RefreshTokenDto();
       expiredRefreshTokenDto.setToken(refreshTokenExpired);
-      ErrorDto errorDtoResponseWithExpiredRefreshTokenHeader = webTestClient.post()
-          .uri("/auth/refresh")
+      ErrorDto errorDtoResponseWithExpiredRefreshTokenHeader = webTestClient.put()
+          .uri("/auth")
           .contentType(MediaType.APPLICATION_JSON)
           .bodyValue(expiredRefreshTokenDto)
           .exchange()
           .expectStatus()
           .isUnauthorized()
           .expectHeader()
-          .valueEquals(JWT_EXCEPTION_HEADER, JwtExceptionType.EXPIRED_REFRESH_TOKEN.getCode())
+          .valueEquals(JWT_EXCEPTION_HEADER, JwtExceptionType.EXPIRED_REFRESH_TOKEN.getStatus())
           .expectBody(ErrorDto.class)
           .returnResult()
           .getResponseBody();
@@ -420,7 +420,7 @@ public class AuthenticationIT {
 
       //login - valid token duration - return valid access token & refresh token
       LoginResponseDto loginResponseWithValidToken = webTestClient.post()
-          .uri("/auth/login")
+          .uri("/auth")
           .contentType(MediaType.APPLICATION_JSON)
           .bodyValue(loginRequestDto)
           .exchange().expectStatus()
@@ -448,7 +448,7 @@ public class AuthenticationIT {
       assertThat(loginResponseWithValidToken).isNotNull();
 
       //logout - valid access token - 200
-      webTestClient.delete().uri("/auth/logout")
+      webTestClient.delete().uri("/auth")
           .header("Authorization", String.format("Bearer %s", validAccessToken))
           .exchange()
           .expectStatus()
